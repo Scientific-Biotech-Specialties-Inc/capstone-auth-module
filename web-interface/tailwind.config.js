@@ -55,7 +55,9 @@ export default {
       },
       spacing: {
         "container-padding": "24px",
-        "card-gap": "24px"
+        "card-gap": "24px",
+        "18": "72px",
+        "header-height": "72px",
       },
       fontFamily: {
         "sans": ["Poppins", "sans-serif"],

@@ -108,7 +108,14 @@ class RoleManagementTest extends TestCase
                          ->deleteJson("/api/admin/roles/{$role->id}");
 
         $response->assertStatus(200);
-        $this->assertDatabaseMissing('roles', ['id' => $role->id]);
+        // Roles are soft-deleted (Phase 1: Role::class now uses SoftDeletes)
+        // so the Visual Contract Workflow Tracker can still resolve a
+        // deleted role's last-known name for historical display. The
+        // default Role query scope excludes trashed rows, so a normal
+        // find() correctly reports it as gone, while the row itself
+        // remains in the table with `deleted_at` set.
+        $this->assertNull(Role::find($role->id));
+        $this->assertNotNull(Role::withTrashed()->find($role->id)->deleted_at);
     }
 
     public function test_cannot_delete_role_with_users()

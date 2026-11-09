@@ -15,7 +15,7 @@ class DecryptRsaPayload
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      * @param  string  ...$fields
      */
-    public function handle(Request $request, Closure $next, ...$fields): Response
+    public function handle(Request $request, Closure $next, ...$fields)
     {
         $keyId = $request->header('X-Key-Id');
 

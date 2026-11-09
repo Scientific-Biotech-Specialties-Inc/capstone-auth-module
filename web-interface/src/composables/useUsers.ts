@@ -4,13 +4,15 @@
 
 import { ref } from 'vue'
 import { userService } from '@/services/userService'
-import type { User, Role, Department, PaginationMeta, CreateUserPayload } from '@/types'
+import { notifySuccess, notifyApiError } from '@/lib/notify'
+import type { User, Role, Department, Branch, PaginationMeta, CreateUserPayload } from '@/types'
 
 export function useUsers() {
   // ── List State ─────────────────────────────────────────────────────────────
   const users = ref<User[]>([])
   const roles = ref<Role[]>([])
   const departments = ref<Department[]>([])
+  const branches = ref<Branch[]>([])
   const isLoading = ref(true)
   const pagination = ref<PaginationMeta>({
     current_page: 1,
@@ -20,6 +22,7 @@ export function useUsers() {
   const filters = ref({
     role_id: '',
     department_id: '',
+    branch_id: '',
     is_active: '',
     search: '',
     per_page: 15,
@@ -44,12 +47,14 @@ export function useUsers() {
 
   const fetchMetadata = async () => {
     try {
-      const [rolesRes, deptsRes] = await Promise.all([
+      const [rolesRes, deptsRes, branchesRes] = await Promise.allSettled([
         userService.fetchRoleOptions(),
         userService.fetchDepartmentOptions(),
+        userService.fetchBranchOptions(),
       ])
-      roles.value = rolesRes.data
-      departments.value = deptsRes.data
+      if (rolesRes.status === 'fulfilled') roles.value = rolesRes.value.data
+      if (deptsRes.status === 'fulfilled') departments.value = deptsRes.value.data
+      if (branchesRes.status === 'fulfilled') branches.value = branchesRes.value.data
     } catch (err) {
       console.error('Failed to fetch metadata', err)
     }
@@ -64,14 +69,16 @@ export function useUsers() {
 
   const fetchCreateFormData = async () => {
     try {
-      const [rolesRes, deptsRes] = await Promise.all([
+      const [rolesRes, deptsRes, branchesRes] = await Promise.allSettled([
         userService.fetchRoleOptions(),
         userService.fetchDepartmentOptions(),
+        userService.fetchBranchOptions(),
       ])
-      roles.value = rolesRes.data
-      departments.value = deptsRes.data
+      if (rolesRes.status === 'fulfilled') roles.value = rolesRes.value.data
+      if (deptsRes.status === 'fulfilled') departments.value = deptsRes.value.data
+      if (branchesRes.status === 'fulfilled') branches.value = branchesRes.value.data
     } catch {
-      generalError.value = 'Failed to load roles or departments.'
+      generalError.value = 'Failed to load roles, departments, or branches.'
     } finally {
       isLoadingData.value = false
     }
@@ -84,19 +91,21 @@ export function useUsers() {
 
     try {
       await userService.createUser(payload)
-      isSuccess.value = true
-      setTimeout(() => {
-        isSuccess.value = false
-      }, 5000)
+      notifySuccess('User created successfully')
       return true
     } catch (error: any) {
       if (error.response?.status === 422) {
-        errors.value = error.response.data.errors
+        errors.value = error.response.data.errors || {}
       } else if (error.response?.status === 409) {
         errors.value = { email: ['Email already exists'] }
-      } else {
-        generalError.value = error.response?.data?.message || 'Failed to create user.'
       }
+
+      // Check duplicates or general API error
+      const result = notifyApiError(error, 'user', 'Failed to create user.')
+      if (result.isDuplicate && !errors.value.email) {
+        errors.value.email = ['Email already exists']
+      }
+
       return false
     } finally {
       isSubmitting.value = false
@@ -110,14 +119,36 @@ export function useUsers() {
     isAssigning.value = true
     try {
       await userService.assignRole(userId, roleId)
+      notifySuccess('Role assigned successfully')
       return { success: true }
     } catch (err: any) {
+      const { message } = notifyApiError(err, 'role', 'Failed to assign role')
       return {
         success: false,
-        message: err.response?.data?.message || 'Failed to assign role',
+        message: message || err.response?.data?.message || 'Failed to assign role',
       }
     } finally {
       isAssigning.value = false
+    }
+  }
+
+  // ── Branch Assignment ──────────────────────────────────────────────────────
+  const isAssigningBranch = ref(false)
+
+  const assignBranch = async (userId: number, branchId: number | string | null) => {
+    isAssigningBranch.value = true
+    try {
+      await userService.assignBranch(userId, branchId)
+      notifySuccess('Branch assigned successfully')
+      return { success: true }
+    } catch (err: any) {
+      const { message } = notifyApiError(err, 'branch', 'Failed to assign branch')
+      return {
+        success: false,
+        message: message || err.response?.data?.message || 'Failed to assign branch',
+      }
+    } finally {
+      isAssigningBranch.value = false
     }
   }
 
@@ -125,18 +156,29 @@ export function useUsers() {
   const isTogglingStatus = ref(false)
   const confirmPasswordError = ref('')
 
-  const toggleUserStatus = async (userId: number, password: string) => {
+  const toggleUserStatus = async (userId: number, password: string, isCurrentlyActive = false) => {
     isTogglingStatus.value = true
     confirmPasswordError.value = ''
 
     try {
       await userService.toggleUserStatus(userId, password)
+      const successMsg = isCurrentlyActive
+        ? 'User deactivated successfully'
+        : 'User activated successfully'
+      notifySuccess(successMsg)
       return true
     } catch (err: any) {
-      confirmPasswordError.value =
+      const status = err.response?.status
+      const errorMsg =
         err.response?.data?.message ||
         err.response?.data?.errors?.password?.[0] ||
         'Password verification failed'
+
+      if (status === 422 || status === 401) {
+        confirmPasswordError.value = errorMsg
+      } else {
+        notifyApiError(err, 'user', 'Failed to update user status')
+      }
       return false
     } finally {
       isTogglingStatus.value = false
@@ -148,6 +190,7 @@ export function useUsers() {
     users,
     roles,
     departments,
+    branches,
     isLoading,
     pagination,
     filters,
@@ -164,6 +207,9 @@ export function useUsers() {
     // Role Assignment
     isAssigning,
     assignRole,
+    // Branch Assignment
+    isAssigningBranch,
+    assignBranch,
     // Status Toggle
     isTogglingStatus,
     confirmPasswordError,

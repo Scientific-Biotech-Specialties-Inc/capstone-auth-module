@@ -1,0 +1,23 @@
+FROM node:20-alpine AS build
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+ARG VITE_INTERNAL_ENCRYPTION_KEY
+ENV VITE_INTERNAL_ENCRYPTION_KEY=$VITE_INTERNAL_ENCRYPTION_KEY
+ARG VITE_SERMS_URL
+ENV VITE_SERMS_URL=$VITE_SERMS_URL
+ARG VITE_CMS_URL
+ENV VITE_CMS_URL=$VITE_CMS_URL
+ARG VITE_PRS_URL
+ENV VITE_PRS_URL=$VITE_PRS_URL
+
+RUN npm run build
+
+FROM nginx:1.27-alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf.tpl /etc/nginx/templates/default.conf.template
+EXPOSE 5000

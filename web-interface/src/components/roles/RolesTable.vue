@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { 
-  Loader2, 
   Shield, 
   Users, 
   Edit2, 
@@ -9,7 +8,8 @@ import {
   Key,
   AlertCircle,
   ChevronLeft, 
-  ChevronRight 
+  ChevronRight,
+  MoreVertical
 } from 'lucide-vue-next'
 import type { Role, PaginationMeta } from '@/types'
 
@@ -34,29 +34,63 @@ const internalPerPage = computed({
   get: () => props.perPage,
   set: (value) => emit('update:perPage', value)
 })
+
+const activeDropdownRoleId = ref<number | null>(null)
+const openUpward = ref(false)
+
+const toggleDropdown = (id: number, index: number, event?: MouseEvent) => {
+  if (activeDropdownRoleId.value === id) {
+    activeDropdownRoleId.value = null
+    return
+  }
+
+  const total = props.roles.length
+  let shouldOpenUp = total > 1 && (total <= 3 ? index === total - 1 : index >= total - 2)
+
+  if (event && event.currentTarget) {
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    if (spaceBelow < 190) {
+      shouldOpenUp = true
+    }
+  }
+
+  openUpward.value = shouldOpenUp
+  activeDropdownRoleId.value = id
+}
+
+const handleClickOutside = (e: MouseEvent) => {
+  const target = e.target as HTMLElement
+  if (!target.closest('.dropdown-trigger') && !target.closest('.dropdown-menu')) {
+    activeDropdownRoleId.value = null
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <template>
   <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-    <div v-if="loading" class="p-16 flex flex-col items-center justify-center gap-4 text-slate-500">
-      <Loader2 class="animate-spin" :size="32" />
-      <p class="font-medium">Loading roles...</p>
-    </div>
-
     <!-- Error State -->
-    <div v-else-if="error && roles.length === 0" class="p-16 text-center">
+    <div v-if="error && roles.length === 0 && !loading" class="p-16 text-center">
       <AlertCircle class="mx-auto mb-3 text-red-400" :size="32" />
       <p class="text-red-600 font-medium">{{ error }}</p>
     </div>
 
     <!-- Empty State -->
-    <div v-else-if="roles.length === 0" class="p-16 text-center text-slate-500">
+    <div v-else-if="!loading && roles.length === 0" class="p-16 text-center text-slate-500">
       <Shield class="mx-auto mb-3 text-slate-400" :size="32" />
       <p class="font-medium">No roles found.</p>
     </div>
 
-    <!-- Table -->
-    <div v-else class="overflow-x-auto">
+    <!-- Table (always visible; skeleton replaces tbody rows when loading) -->
+    <div v-else class="overflow-x-auto min-h-[220px]">
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="border-b border-slate-100 bg-slate-50/50">
@@ -67,7 +101,33 @@ const internalPerPage = computed({
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-50">
-          <tr v-for="role in roles" :key="role.id" class="hover:bg-slate-50/50 transition-colors">
+          <!-- ── Skeleton Loader Rows (DESIGN.md §VIII: skeleton for data tables) ── -->
+          <template v-if="loading">
+            <tr v-for="i in perPage" :key="`skel-${i}`" class="animate-pulse">
+              <!-- Role cell -->
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-slate-200 flex-shrink-0"></div>
+                  <div class="h-3 w-32 bg-slate-200 rounded"></div>
+                </div>
+              </td>
+              <!-- Description cell -->
+              <td class="px-6 py-4">
+                <div class="h-3 w-48 bg-slate-200 rounded"></div>
+              </td>
+              <!-- Users count cell -->
+              <td class="px-6 py-4 text-center">
+                <div class="h-6 w-16 bg-slate-200 rounded-full mx-auto"></div>
+              </td>
+              <!-- Actions cell -->
+              <td class="px-6 py-4">
+                <div class="h-6 w-6 bg-slate-200 rounded-lg ml-auto"></div>
+              </td>
+            </tr>
+          </template>
+          <!-- Real Data Rows -->
+          <template v-else>
+            <tr v-for="(role, index) in roles" :key="role.id" class="hover:bg-slate-50/50 transition-colors">
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
@@ -89,32 +149,53 @@ const internalPerPage = computed({
                 {{ role.users_count ?? 0 }} Users
               </button>
             </td>
-            <td class="px-6 py-4 text-right">
-              <div class="flex items-center justify-end gap-2">
+            <td class="px-6 py-4 text-right" :class="{ 'relative z-40': activeDropdownRoleId === role.id }">
+              <div class="flex justify-end items-center relative" :class="{ 'z-40': activeDropdownRoleId === role.id }">
+                <!-- 3-Dots Action Button -->
                 <button 
-                  @click="emit('open-perm-modal', role)"
-                  class="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
-                  title="Manage Permissions"
+                  @click.stop="toggleDropdown(role.id, index, $event)"
+                  class="dropdown-trigger p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-all cursor-pointer"
+                  title="Actions"
                 >
-                  <Key :size="16" />
+                  <MoreVertical :size="18" />
                 </button>
-                <button 
-                  @click="emit('open-edit-modal', role)"
-                  class="p-2 text-slate-400 hover:text-[#252578] hover:bg-blue-50 rounded-lg transition-all"
-                  title="Edit Role"
+
+                <!-- Dropdown Menu (Smart Auto-Flip Up/Down) -->
+                <div 
+                  v-if="activeDropdownRoleId === role.id"
+                  class="dropdown-menu absolute right-0 z-40 bg-white border border-slate-200 rounded-xl shadow-lg p-1.5 flex flex-col gap-1 min-w-[170px] text-left animate-in fade-in duration-150"
+                  :class="openUpward ? 'bottom-full mb-1 slide-in-from-bottom-1' : 'top-full mt-1 slide-in-from-top-1'"
                 >
-                  <Edit2 :size="16" />
-                </button>
-                <button 
-                  @click="emit('delete', role.id)"
-                  class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                  title="Delete Role"
-                >
-                  <Trash2 :size="16" />
-                </button>
+                  <button 
+                    @click.stop="activeDropdownRoleId = null; emit('open-edit-modal', role)"
+                    class="w-full px-3 py-2 hover:bg-slate-50 text-slate-700 hover:text-slate-900 rounded-lg transition-all flex items-center gap-2.5 text-xs font-semibold cursor-pointer"
+                  >
+                    <Edit2 :size="14" class="text-slate-400" />
+                    <span>Edit Role</span>
+                  </button>
+
+                  <button 
+                    @click.stop="activeDropdownRoleId = null; emit('open-perm-modal', role)"
+                    class="w-full px-3 py-2 hover:bg-amber-50 text-slate-700 hover:text-amber-800 rounded-lg transition-all flex items-center gap-2.5 text-xs font-semibold cursor-pointer"
+                  >
+                    <Key :size="14" class="text-amber-500" />
+                    <span>Edit Permissions</span>
+                  </button>
+
+                  <div class="h-px bg-slate-100 my-0.5"></div>
+
+                  <button 
+                    @click.stop="activeDropdownRoleId = null; emit('delete', role.id)"
+                    class="w-full px-3 py-2 hover:bg-red-50 text-red-600 rounded-lg transition-all flex items-center gap-2.5 text-xs font-semibold cursor-pointer"
+                  >
+                    <Trash2 :size="14" class="text-red-500" />
+                    <span>Delete Role</span>
+                  </button>
+                </div>
               </div>
             </td>
           </tr>
+          </template>
         </tbody>
       </table>
     </div>

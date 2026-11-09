@@ -1,5 +1,7 @@
 # Runtime stage
-FROM php:8.3-fpm-alpine
+# Pinned to an exact patch release: 8.3.36 fixes php2shell
+# (CVE-2026-109618 / CVE-2026-109619). Do not revert to the floating 8.3 tag.
+FROM php:8.3.36-fpm-alpine
 WORKDIR /var/www/html
 
 # Install system dependencies and PHP extensions
@@ -26,6 +28,9 @@ RUN apk add --no-cache \
         echo 'opcache.validate_timestamps=1'; \
     } > /usr/local/etc/php/conf.d/opcache.ini
 
+# php2shell hardening ini (zz- prefix = loaded last, overrides defaults)
+COPY docker/php/zz-security.ini /usr/local/etc/php/conf.d/zz-security.ini
+
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -37,6 +42,9 @@ RUN composer install --no-interaction --optimize-autoloader
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+
+# Passport requires key files to have restrictive permissions (600/660)
+RUN chmod 600 storage/oauth-private.key storage/oauth-public.key
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh

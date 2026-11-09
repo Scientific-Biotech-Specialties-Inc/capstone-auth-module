@@ -7,6 +7,13 @@ import { authService } from '@/services/authService'
 import type { LoginCredentials, ResetPasswordPayload } from '@/types'
 import { clearClientAuthState } from '@/utils/authState'
 
+export interface FetchCurrentUserResult {
+  success: boolean
+  user: unknown
+  passwordChangeRequired?: boolean
+  sessionExpired?: boolean
+}
+
 export function useAuth() {
   // ── Login ──────────────────────────────────────────────────────────────────
   const loginLoading = ref(false)
@@ -20,9 +27,18 @@ export function useAuth() {
 
     try {
       const response = await authService.login(credentials)
-      const { user } = response.data
+      const data = response.data
+      const candidate = data?.user ?? data
+      const user =
+        candidate && typeof candidate === 'object' && ('id' in candidate || 'email' in candidate)
+          ? candidate
+          : null
 
-      localStorage.setItem('user', JSON.stringify(user))
+      if (user) {
+        localStorage.setItem('user', JSON.stringify(user))
+      } else {
+        localStorage.removeItem('user')
+      }
 
       return { success: true, user }
     } catch (error: any) {
@@ -65,6 +81,52 @@ export function useAuth() {
    */
   const clearLocalAuth = () => {
     clearClientAuthState()
+  }
+
+  // ── Fetch Current User ─────────────────────────────────────────────────────
+  // Hydrates the user from the authoritative backend (/api/user).
+  // Shape varies by route definition: AuthController::me wraps as
+  // { user: {...} } while the closure route returns the user object
+  // directly. Accept both so a shape change can't wipe local state.
+  const fetchCurrentUser = async (): Promise<FetchCurrentUserResult> => {
+    try {
+      const response = await authService.fetchMe()
+      const data = response.data
+      const candidate = data?.user ?? data
+      const user =
+        candidate && typeof candidate === 'object' && ('id' in candidate || 'email' in candidate)
+          ? candidate
+          : null
+
+      if (user) {
+        localStorage.setItem('user', JSON.stringify(user))
+      } else {
+        localStorage.removeItem('user')
+      }
+
+      return { success: true, user }
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        const code = error.response?.data?.code
+        if (code === 'PASSWORD_CHANGE_REQUIRED') {
+          // Authenticated but must change password first — do NOT clear state.
+          return { success: false, user: null, passwordChangeRequired: true }
+        }
+      }
+
+      if (error.response?.status === 401) {
+        // The api.ts response interceptor already attempted a refresh and, on
+        // failure, called clearAuthAndRedirect(). That helper invokes
+        // clearClientAuthState(), which removes localStorage['user'] AND the
+        // is_authenticated cookie, then redirects to '/login'. The explicit
+        // clearClientAuthState() below is a defensive no-op kept for safety.
+        clearClientAuthState()
+        return { success: false, user: null, sessionExpired: true }
+      }
+
+      // Network or other failures — keep the current client state intact.
+      return { success: false, user: null }
+    }
   }
 
   // ── Forgot Password ───────────────────────────────────────────────────────
@@ -178,11 +240,15 @@ export function useAuth() {
       
       // Update local storage user flag
       const userStr = localStorage.getItem('user')
-      if (userStr) {
-        const user = JSON.parse(userStr)
-        user.is_password_changed = true
-        user.is_active = true
-        localStorage.setItem('user', JSON.stringify(user))
+      if (userStr && userStr !== 'undefined') {
+        try {
+          const user = JSON.parse(userStr)
+          user.is_password_changed = true
+          user.is_active = true
+          localStorage.setItem('user', JSON.stringify(user))
+        } catch {
+          // Corrupt snapshot — ignore, server is source of truth.
+        }
       }
 
       return {
@@ -218,6 +284,8 @@ export function useAuth() {
     // Logout
     logout,
     clearLocalAuth,
+    // Current User
+    fetchCurrentUser,
     // Forgot Password
     forgotPassword,
     forgotLoading,

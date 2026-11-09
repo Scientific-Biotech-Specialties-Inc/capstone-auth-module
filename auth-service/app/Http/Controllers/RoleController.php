@@ -25,6 +25,19 @@ class RoleController extends Controller
         ));
     }
 
+    /**
+     * GET /admin/roles/access-systems — every visible role with its
+     * permission systems. Consumed by CMS to render dynamic role tabs
+     * (a tab per role whose systems include 'cms').
+     */
+    public function accessSystems(Request $request)
+    {
+        Gate::authorize('manage-roles');
+        return response()->json(
+            $this->rolePermissionService->getRolesAccessSystems($request->user())
+        );
+    }
+
     public function store(Request $request)
     {
         Gate::authorize('manage-roles');

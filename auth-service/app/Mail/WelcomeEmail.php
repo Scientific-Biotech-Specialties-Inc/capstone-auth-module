@@ -24,7 +24,7 @@ class WelcomeEmail extends Mailable implements ShouldQueue
     {
         $this->email = $email;
         $this->password = $password;
-        $this->url = env('FRONTEND_URL', 'http://localhost:5173');
+        $this->url = rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/') . '/login';
     }
 
     /**

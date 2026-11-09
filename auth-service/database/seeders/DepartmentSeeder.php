@@ -18,6 +18,7 @@ class DepartmentSeeder extends Seeder
             ['name' => 'Human Resources'],
             ['name' => 'IT'],
             ['name' => 'Operations'],
+            ['name' => 'Customer Service'],
             ['name' => 'RA/QA'],
             ['name' => 'Sales & Marketing'],
             ['name' => 'Service'],

@@ -9,6 +9,10 @@ export const roleService = {
     return api.get('/api/admin/roles', { params })
   },
 
+  getRole(id: number) {
+    return api.get(`/api/admin/roles/${id}`)
+  },
+
   createRole(payload: Omit<RoleForm, 'id'>) {
     return api.post('/api/admin/roles', payload)
   },

@@ -78,15 +78,17 @@ class SalesMarketingAdminRolePermissionTest extends TestCase
         
         $roleNames = collect($response->json()['data'])->pluck('name')->toArray();
 
-        // Must contain only the allowed roles (Manager and Employee)
+        // Base scoped roles plus any role granted CMS access (dynamic:
+        // Sales and CEO hold cms permissions in seeds, so they surface).
         $this->assertContains('Manager', $roleNames);
         $this->assertContains('Employee', $roleNames);
-        
-        // Must NOT contain global admin/infrastructure roles or other department specific ones
+        $this->assertContains('Sales', $roleNames);
+        $this->assertContains('CEO', $roleNames);
+
+        // Platform admin roles stay IT-governed; other departments excluded.
         $this->assertNotContains('IT Admin', $roleNames);
         $this->assertNotContains('Super Admin', $roleNames);
         $this->assertNotContains('Admin', $roleNames);
-        $this->assertNotContains('Sales', $roleNames);
         $this->assertNotContains('Finance', $roleNames);
     }
 

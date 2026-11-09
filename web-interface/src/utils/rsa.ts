@@ -6,25 +6,52 @@ export interface EncryptionKeyResponse {
   key_id: string
 }
 
-/**
- * Fetches the public key and key ID from the server
- */
-export async function fetchEncryptionKey(): Promise<EncryptionKeyResponse> {
-  const response = await api.get('/api/encryption-key')
-  return response.data
+interface CachedKey {
+  publicKey: string
+  keyId: string
+  fetchedAt: number
 }
 
-/**
- * Encrypts a string payload using the provided public RSA key
- */
+const KEY_TTL_MS = 5 * 60 * 1000;
+
+let cachedKey: CachedKey | null = null;
+
+function isKeyExpired(key: CachedKey): boolean {
+  return Date.now() - key.fetchedAt >= KEY_TTL_MS;
+}
+
+export function clearEncryptionKeyCache(): void {
+  cachedKey = null;
+}
+
+export async function fetchEncryptionKey(forceRefresh = false): Promise<EncryptionKeyResponse> {
+  if (cachedKey && !isKeyExpired(cachedKey) && !forceRefresh) {
+    return {
+      public_key: cachedKey.publicKey,
+      key_id: cachedKey.keyId,
+    };
+  }
+
+  const response = await api.get('/api/encryption-key')
+  const data: EncryptionKeyResponse = response.data;
+
+  cachedKey = {
+    publicKey: data.public_key,
+    keyId: data.key_id,
+    fetchedAt: Date.now(),
+  };
+
+  return data;
+}
+
 export function encryptPayload(payload: string, publicKey: string): string {
   const encryptor = new JSEncrypt()
   encryptor.setPublicKey(publicKey)
   const encrypted = encryptor.encrypt(payload)
-  
+
   if (!encrypted) {
     throw new Error('Encryption failed')
   }
-  
+
   return encrypted as string
 }

@@ -16,15 +16,17 @@ class RolePermissionSeeder extends Seeder
     public function run(): void
     {
         $roles = [
-            ['name' => 'Super Admin',         'description' => 'System wide access'],
-            ['name' => 'IT Admin',            'description' => 'IT infrastructure and user management'],
-            ['name' => 'Admin',               'description' => 'General administration'],
-            ['name' => 'Manager',             'description' => 'Management of specific department'],
-            ['name' => 'Sales',               'description' => 'Sales staff access'],
-            ['name' => 'Supervisor',          'description' => 'Department supervisor access'],
-            ['name' => 'Finance',             'description' => 'Finance staff access'],
-            ['name' => 'Accountant',          'description' => 'Accounting staff access'],
-            ['name' => 'Employee',            'description' => 'Regular staff access'],
+            ['name' => 'Super Admin',         'description' => 'System wide access',                       'nav_group' => 'admin'],
+            ['name' => 'IT Admin',            'description' => 'IT infrastructure and user management',    'nav_group' => 'admin'],
+            ['name' => 'Admin',               'description' => 'General administration',                   'nav_group' => 'admin'],
+            ['name' => 'Manager',             'description' => 'Management of specific department',        'nav_group' => 'manager'],
+            ['name' => 'Sales',               'description' => 'Sales staff access',                        'nav_group' => 'staff'],
+            ['name' => 'Supervisor',          'description' => 'Department supervisor access',              'nav_group' => 'manager'],
+            ['name' => 'Finance',             'description' => 'Finance staff access',                      'nav_group' => 'staff'],
+            ['name' => 'Employee',            'description' => 'Regular staff access',                      'nav_group' => 'staff'],
+            ['name' => 'CEO',                 'description' => 'Chief Executive Officer with executive authority across workflows and systems', 'nav_group' => 'admin'],
+            ['name' => 'Accountant',          'description' => 'Accounting staff access',                   'nav_group' => 'staff'],
+            ['name' => 'Engineer',            'description' => 'Field and Service Engineer access',         'nav_group' => 'staff'],
         ];
 
         // insertOrIgnore: skips duplicates instead of crashing
@@ -133,6 +135,29 @@ class RolePermissionSeeder extends Seeder
             $cmsAdmin->permissions()->syncWithoutDetaching($adminPerms->pluck('id'));
         }
 
+        // 2b. CEO — executive authority, all CMS permissions for workflows and approvals
+        $ceoRole = \App\Models\Role::where('name', 'CEO')->first();
+        if ($ceoRole) {
+            $ceoPerms = \App\Models\Permission::whereIn('slug', [
+                'cms.roles.manage',
+                'cms.templates.manage',
+                'cms.templates.use',
+                'cms.ocr.upload',
+                'cms.ocr.process',
+                'cms.ocr.review',
+                'cms.contracts.generate',
+                'cms.risk.assess',
+                'cms.risk.view',
+                'cms.risk.approve',
+                // CRUD
+                'cms.contracts.view', 'cms.contracts.create', 'cms.contracts.edit', 'cms.contracts.delete', 'cms.contracts.approve',
+                'cms.users.view',
+                'cms.partners.view',  'cms.partners.create',  'cms.partners.edit',  'cms.partners.delete',
+                'view-dashboard',
+            ])->get();
+            $ceoRole->permissions()->syncWithoutDetaching($ceoPerms->pluck('id'));
+        }
+
         // 3. CMS Manager ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â broad access, cannot delete users or manage roles
         $cmsManager = \App\Models\Role::where('name', 'Manager')->first();
         if ($cmsManager) {
@@ -208,7 +233,7 @@ class RolePermissionSeeder extends Seeder
             $role->permissions()->syncWithoutDetaching($prsValidationPerms->pluck('id'));
         }
 
-        foreach (\App\Models\Role::whereIn('name', ['Sales', 'Employee', 'Finance', 'Finance Employee', 'Accountant'])->get() as $role) {
+        foreach (\App\Models\Role::whereIn('name', ['Sales', 'Employee', 'Finance', 'Finance Employee', 'Accountant', 'Engineer'])->get() as $role) {
             $role->permissions()->syncWithoutDetaching($prsBasicPerms->pluck('id'));
         }
 

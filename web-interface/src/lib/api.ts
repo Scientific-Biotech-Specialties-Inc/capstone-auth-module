@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { clearClientAuthState } from '@/utils/authState'
 
 const api = axios.create({
   baseURL: '',
@@ -37,8 +38,8 @@ let isRefreshing = false
 let pendingRequests: Array<(token: string) => void> = []
 
 function clearAuthAndRedirect() {
-  localStorage.removeItem('user')
-  window.location.href = '/'
+  clearClientAuthState()
+  window.location.href = '/login?message=' + encodeURIComponent('Your session has expired. Please log in again.')
 }
 
 // Global response interceptor: try token refresh before logging the user out

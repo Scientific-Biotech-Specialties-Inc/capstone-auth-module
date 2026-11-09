@@ -15,13 +15,23 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         $usersToSeed = [
+            ['Super', null, 'Admin', 'superadmin@example.com', 'IT', 'Super Admin'],
             ['System', null, 'Administrator', 'admin@example.com', 'IT', 'IT Admin'],
             ['Department', null, 'Manager', 'manager@example.com', 'Operations', 'Manager'],
             ['Sales', null, 'Representative', 'sales@example.com', 'Operations', 'Sales'],
             ['Finance', null, 'Officer', 'finance@example.com', 'Finance', 'Employee'],
             ['Finance', null, 'Administrator', 'finance-admin@example.com', 'Finance', 'Admin'],
             ['Finance', null, 'Manager', 'finance-manager@example.com', 'Finance', 'Manager'],
+            ['Sales Marketing', null, 'Administrator', 'sales-marketing-admin@example.com', 'Sales & Marketing', 'Admin'],
+            ['Sales Marketing', null, 'Manager', 'sales-marketing-manager@example.com', 'Sales & Marketing', 'Manager'],
+            ['Sales Marketing', null, 'Officer', 'sales-marketing-officer@example.com', 'Sales & Marketing', 'Employee'],
             ['General', null, 'Employee', 'employee@example.com', 'Operations', 'Employee'],
+            ['Chief', null, 'Executive', 'ceo@example.com', 'Executive', 'CEO'],
+            ['Support', null, 'Engineer', 'engineer@example.com', 'Service', 'Employee'],
+            ['Customer', null, 'Support', 'cs@example.com', 'Customer Service', 'Employee'],
+            ['Bernadette', null, 'Tormo', 'employee1@gmail.com', 'Service', 'Engineer'],
+            ['Bernadette', null, 'Tormots', 'employee2@gmail.com', 'Service', 'Engineer'],
+            ['Bernadette', null, 'Badette', 'employee3@gmail.com', 'Service', 'Engineer'],
 
             // PRS seed accounts. Auth Module is the login source of truth; PRS projects these locally after login.
             ['Sofia', null, 'Montenegro', 'superadmin@sbsi.com', 'Executive', 'Super Admin'],
@@ -69,7 +79,7 @@ class UserSeeder extends Seeder
             UserCredential::updateOrCreate(
                 ['user_id' => $user->id],
                 [
-                    'password_hash' => Hash::make('password', ['rounds' => 12]),
+                    'password_hash' => Hash::make('password', ['rounds' => config('hashing.bcrypt.rounds', 12)]),
                     'must_change_password' => false,
                     'password_changed_at' => now(),
                 ]

@@ -71,7 +71,7 @@ class UserService
 
     public function getUserById(int $id): User
     {
-        $user = $this->userRepo->findById($id, ['profile.role', 'profile.department']);
+        $user = $this->userRepo->findById($id, ['profile.role', 'profile.department', 'profile.branch']);
         if (!$user) {
             throw (new \Illuminate\Database\Eloquent\ModelNotFoundException)->setModel(User::class, $id);
         }
@@ -90,6 +90,12 @@ class UserService
         if (empty($validated['department_id']) && !empty($validated['department_name'])) {
             $dept = $this->departmentRepo->findByName($validated['department_name']);
             $validated['department_id'] = $dept?->id;
+        }
+
+        // Resolve branch_name -> branch_id
+        if (empty($validated['branch_id']) && !empty($validated['branch_name'])) {
+            $branch = \App\Models\Branch::where('name', $validated['branch_name'])->first();
+            $validated['branch_id'] = $branch?->id;
         }
 
         if (empty($validated['role_id']) || empty($validated['department_id'])) {
@@ -142,6 +148,7 @@ class UserService
                 'last_name' => $validated['last_name'],
                 'role_id' => $validated['role_id'],
                 'department_id' => $validated['department_id'],
+                'branch_id' => $validated['branch_id'] ?? null,
             ]);
 
             $this->userRepo->createCredentials($user->id, Hash::make($tempPassword), true);
@@ -173,21 +180,31 @@ class UserService
                 Log::warning('Failed to invalidate cache after user creation', ['error' => $e->getMessage()]);
             }
 
-            $this->emailNotificationService->queueNotification(
-                'welcome_temp_password',
-                $user->email,
-                [
-                    'email' => $user->email,
-                    'first_name' => $validated['first_name'],
-                    'temporary_password' => $tempPassword,
-                    'login_url' => rtrim((string) config('app.frontend_url', 'http://localhost:5173'), '/') . '/login',
-                    'app_name' => config('app.name'),
-                ],
-                $user->id,
-                'Welcome to ' . config('app.name')
-            );
+            // Email queuing is best-effort: a misconfigured template or provider
+            // must NOT roll back an already-committed user record.
+            try {
+                $this->emailNotificationService->queueNotification(
+                    'welcome_temp_password',
+                    $user->email,
+                    [
+                        'email' => $user->email,
+                        'first_name' => $validated['first_name'],
+                        'temporary_password' => $tempPassword,
+                        'login_url' => rtrim((string) config('app.frontend_url', 'http://localhost:5173'), '/') . '/login',
+                        'app_name' => config('app.name'),
+                    ],
+                    $user->id,
+                    'Welcome to ' . config('app.name')
+                );
+            } catch (\Exception $e) {
+                Log::warning('Failed to queue welcome email after user creation', [
+                    'user_id'   => $user->id,
+                    'email'     => $user->email,
+                    'error'     => $e->getMessage(),
+                ]);
+            }
 
-            return $user->load(['profile.role', 'profile.department']);
+            return $user->load(['profile.role', 'profile.department', 'profile.branch']);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -308,6 +325,7 @@ class UserService
             'last_name' => $user->profile->last_name ?? '',
             'role' => $user->profile->role->name ?? '',
             'department' => $user->profile->department->name ?? '',
+            'branch' => $user->profile->branch->name ?? '',
             'phone' => $user->profile->phone ?? '',
         ];
     }

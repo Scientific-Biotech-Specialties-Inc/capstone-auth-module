@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { 
   Plus, 
   Search, 
@@ -9,8 +10,8 @@ import { useRoles } from '@/composables/useRoles'
 import type { Role } from '@/types'
 import RolesTable from './RolesTable.vue'
 import RoleFormModal from './RoleFormModal.vue'
-import RolePermissionsModal from './RolePermissionsModal.vue'
 import RoleUsersModal from './RoleUsersModal.vue'
+import ConfirmModal from '@/components/common/ConfirmModal.vue'
 
 const {
   roles,
@@ -23,12 +24,6 @@ const {
   createRole,
   updateRole,
   deleteRole,
-  // Permission Sync
-  allPermissions,
-  selectedPermissionIds,
-  loadingPermissions,
-  fetchRolePermissions,
-  syncRolePermissions,
   // Role Users
   roleUsers,
   loadingUsers,
@@ -73,32 +68,35 @@ const handleSubmit = async (payload: { id: number | null, name: string, descript
   }
 }
 
-const handleDelete = async (id: number) => {
-  if (!confirm('Are you sure you want to delete this role? This action cannot be undone.')) return
+// ── Delete Confirmation ──────────────────────────────────────────────────────
+const showDeleteModal = ref(false)
+const roleToDelete = ref<Role | null>(null)
+const isDeletingRole = ref(false)
 
-  const result = await deleteRole(id)
-  if (!result.success) {
-    alert(result.message)
+const handleDelete = (id: number) => {
+  const role = roles.value.find(r => r.id === id)
+  if (!role) return
+  roleToDelete.value = role
+  showDeleteModal.value = true
+}
+
+const handleConfirmDelete = async () => {
+  if (!roleToDelete.value) return
+  isDeletingRole.value = true
+  try {
+    await deleteRole(roleToDelete.value.id)
+  } finally {
+    isDeletingRole.value = false
+    showDeleteModal.value = false
+    roleToDelete.value = null
   }
 }
 
-// ── Permission Sync Modal ────────────────────────────────────────────────────
-const showPermModal = ref(false)
-const selectedRole = ref<Role | null>(null)
+const router = useRouter()
 
-const openPermModal = async (role: Role) => {
-  selectedRole.value = role
-  showPermModal.value = true
-  await fetchRolePermissions(role.id)
-}
-
-
-const handleSavePermissions = async () => {
-  if (!selectedRole.value) return
-  const success = await syncRolePermissions(selectedRole.value.id)
-  if (success) {
-    showPermModal.value = false
-  }
+// ── Permission Management Navigation ─────────────────────────────────────────
+const openPermModal = (role: Role) => {
+  router.push({ name: 'admin-role-permissions', params: { id: role.id } })
 }
 
 // ── Users Modal ──────────────────────────────────────────────────────────────
@@ -129,10 +127,10 @@ watch(filters, () => {
       
       <button 
         @click="openCreateModal"
-        class="inline-flex items-center gap-2 bg-gradient-to-r from-[#252578] to-[#3b82f6] text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:shadow-lg transition-all active:scale-95"
+        class="inline-flex items-center gap-2 bg-[#252578] hover:bg-[#1e1e66] text-white px-5 py-2.5 rounded-lg text-sm font-semibold shadow-sm hover:shadow-md transition-all active:scale-98 cursor-pointer"
       >
         <Plus :size="18" />
-        Create Role
+        <span>Create Role</span>
       </button>
     </div>
 
@@ -187,18 +185,6 @@ watch(filters, () => {
       @submit="handleSubmit"
     />
 
-    <!-- Permission Sync Modal -->
-    <RolePermissionsModal
-      v-model="showPermModal"
-      :role="selectedRole"
-      :all-permissions="allPermissions"
-      v-model:selected-permission-ids="selectedPermissionIds"
-      :loading="loadingPermissions"
-      :submitting="submitting"
-      :error="error"
-      @submit="handleSavePermissions"
-    />
-
     <!-- Users Modal -->
     <RoleUsersModal
       v-model="showUsersModal"
@@ -206,5 +192,20 @@ watch(filters, () => {
       :users="roleUsers"
       :loading="loadingUsers"
     />
+
+    <!-- Delete Confirmation Modal -->
+    <ConfirmModal
+      :show="showDeleteModal"
+      title="Delete Role"
+      confirm-label="Delete"
+      variant="danger"
+      :is-submitting="isDeletingRole"
+      @close="showDeleteModal = false"
+      @confirm="handleConfirmDelete"
+    >
+      <p>
+        Are you sure you want to permanently delete the role <strong class="font-bold text-slate-800">'{{ roleToDelete?.name }}'</strong>? This action cannot be undone and the record data will be removed from the system.
+      </p>
+    </ConfirmModal>
   </div>
 </template>

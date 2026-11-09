@@ -10,6 +10,7 @@ import type { Permission } from '@/types'
 import PermissionFormModal from './PermissionFormModal.vue'
 import PermissionsTable from './PermissionsTable.vue'
 import AssignRolesModal from './AssignRolesModal.vue'
+import ConfirmModal from '@/components/common/ConfirmModal.vue'
 
 const {
   permissions,
@@ -63,7 +64,12 @@ const openCreateModal = () => {
 
 const openEditModal = (permission: Permission) => {
   modalMode.value = 'edit'
-  selectedPermissionForEdit.value = { ...permission }
+  selectedPermissionForEdit.value = { 
+    id: permission.id, 
+    name: permission.name, 
+    slug: permission.slug, 
+    description: permission.description || '' 
+  }
   showModal.value = true
 }
 
@@ -82,12 +88,27 @@ const handleSubmit = async (payload: { id: number | null, name: string, slug: st
   }
 }
 
-const handleDelete = async (id: number) => {
-  if (!confirm('Are you sure you want to delete this permission? This may affect user access.')) return
+// ── Delete Confirmation ──────────────────────────────────────────────────────
+const showDeleteModal = ref(false)
+const permToDelete = ref<Permission | null>(null)
+const isDeletingPerm = ref(false)
 
-  const result = await deletePermissionAction(id)
-  if (!result.success) {
-    alert(result.message)
+const handleDelete = (id: number) => {
+  const perm = permissions.value.find(p => p.id === id)
+  if (!perm) return
+  permToDelete.value = perm
+  showDeleteModal.value = true
+}
+
+const handleConfirmDelete = async () => {
+  if (!permToDelete.value) return
+  isDeletingPerm.value = true
+  try {
+    await deletePermissionAction(permToDelete.value.id)
+  } finally {
+    isDeletingPerm.value = false
+    showDeleteModal.value = false
+    permToDelete.value = null
   }
 }
 
@@ -109,10 +130,10 @@ watch(filters, () => {
       
       <button 
         @click="openCreateModal"
-        class="inline-flex items-center gap-2 bg-gradient-to-r from-[#252578] to-[#3b82f6] text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:shadow-lg transition-all active:scale-95"
+        class="inline-flex items-center gap-2 bg-[#252578] hover:bg-[#1e1e66] text-white px-5 py-2.5 rounded-lg text-sm font-semibold shadow-sm hover:shadow-md transition-all active:scale-98 cursor-pointer"
       >
         <Plus :size="18" />
-        Add New Permission
+        <span>Add New Permission</span>
       </button>
     </div>
 
@@ -176,5 +197,20 @@ watch(filters, () => {
       :error="error"
       @submit="handleSubmit"
     />
+
+    <!-- Delete Confirmation Modal -->
+    <ConfirmModal
+      :show="showDeleteModal"
+      title="Delete Permission"
+      confirm-label="Delete"
+      variant="danger"
+      :is-submitting="isDeletingPerm"
+      @close="showDeleteModal = false"
+      @confirm="handleConfirmDelete"
+    >
+      <p>
+        Are you sure you want to permanently delete permission <strong class="font-bold text-slate-800">'{{ permToDelete?.name }}'</strong>? This action cannot be undone and may affect user access.
+      </p>
+    </ConfirmModal>
   </div>
 </template>

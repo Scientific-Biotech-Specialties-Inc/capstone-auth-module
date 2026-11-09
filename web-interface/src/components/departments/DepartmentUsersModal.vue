@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, toRef } from 'vue'
 import { X, Loader2, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import type { Department } from '@/types'
 
 const props = defineProps<{
@@ -16,6 +17,8 @@ const emit = defineEmits<{
   (e: 'page-change', page: number): void
 }>()
 
+useBodyScrollLock(toRef(props, 'modelValue'))
+
 const isVisible = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val)
@@ -27,10 +30,11 @@ const close = () => {
 </script>
 
 <template>
-  <div v-if="isVisible" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="close"></div>
-    
-    <div class="relative bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+  <Teleport to="body">
+    <div v-if="isVisible" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+      <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm" @click="close"></div>
+      
+      <div class="relative bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
       <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
         <div>
           <h2 class="text-xl font-bold text-slate-900">Department Users</h2>
@@ -104,4 +108,5 @@ const close = () => {
       </div>
     </div>
   </div>
+  </Teleport>
 </template>

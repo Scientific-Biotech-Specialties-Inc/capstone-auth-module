@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
 import { clearClientAuthState, hasAuthStatusCookie, hasLocalUser } from '@/utils/authState'
+import ToastNotification from '@/components/common/ToastNotification.vue'
 
 let authCheckInterval: ReturnType<typeof setInterval>
 
@@ -26,4 +27,5 @@ onUnmounted(() => {
 
 <template>
   <router-view />
+  <ToastNotification />
 </template>

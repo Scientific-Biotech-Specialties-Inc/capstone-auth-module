@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Role extends Model
 {
-    protected $fillable = ['name', 'description'];
+    use SoftDeletes;
+
+    protected $fillable = ['name', 'description', 'nav_group'];
 
     public function permissions()
     {
@@ -16,5 +19,15 @@ class Role extends Model
     public function users()
     {
         return $this->hasMany(UserProfile::class, 'role_id', 'id');
+    }
+
+    public function nameHistory()
+    {
+        return $this->hasMany(RoleNameHistory::class)->orderByDesc('changed_at');
+    }
+
+    public function delegations()
+    {
+        return $this->hasMany(Delegation::class);
     }
 }

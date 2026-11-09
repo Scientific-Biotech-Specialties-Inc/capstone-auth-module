@@ -12,10 +12,10 @@ final class InternalUserController extends Controller
 {
     private function verifySecret(Request $request): ?JsonResponse
     {
-        $secret = $request->header('X-Internal-Secret');
-        $expectedSecret = env('INTERNAL_SERVICE_SECRET');
+        $secret = (string) $request->header('X-Internal-Secret');
+        $expectedSecret = (string) env('INTERNAL_SERVICE_SECRET');
 
-        if (!$secret || $secret !== $expectedSecret) {
+        if ($secret === '' || $expectedSecret === '' || !hash_equals($expectedSecret, $secret)) {
             return response()->json(['valid' => false, 'message' => 'Forbidden.'], 403);
         }
 
@@ -32,7 +32,7 @@ final class InternalUserController extends Controller
             return $forbidden;
         }
 
-        $user = User::with(['profile.role', 'profile.department'])->find($id);
+        $user = User::with(['profile.role', 'profile.department', 'profile.branch'])->find($id);
 
         if (!$user) {
             return response()->json(['message' => 'User not found.'], 404);
@@ -45,6 +45,13 @@ final class InternalUserController extends Controller
             'last_name' => $user->profile?->last_name ?? '',
             'role' => $user->profile?->role?->name,
             'department' => $user->profile?->department?->name,
+            'branch_id' => $user->profile?->branch_id,
+            'branch' => $user->profile?->branch?->name,
+            'branch_details' => $user->profile?->branch ? [
+                'id' => $user->profile->branch->id,
+                'name' => $user->profile->branch->name,
+                'address' => $user->profile->branch->address,
+            ] : null,
         ]);
     }
 
@@ -69,7 +76,7 @@ final class InternalUserController extends Controller
             ->whereHas('profile.role', function ($query) use ($rolesList) {
                 $query->whereIn('name', $rolesList);
             })
-            ->with(['profile.role', 'profile.department'])
+            ->with(['profile.role', 'profile.department', 'profile.branch'])
             ->get();
 
         $data = $users->map(fn ($user) => [
@@ -79,6 +86,13 @@ final class InternalUserController extends Controller
             'last_name' => $user->profile?->last_name ?? '',
             'role' => $user->profile?->role?->name,
             'department' => $user->profile?->department?->name,
+            'branch_id' => $user->profile?->branch_id,
+            'branch' => $user->profile?->branch?->name,
+            'branch_details' => $user->profile?->branch ? [
+                'id' => $user->profile->branch->id,
+                'name' => $user->profile->branch->name,
+                'address' => $user->profile->branch->address,
+            ] : null,
         ])->values()->all();
 
         return response()->json(['data' => $data]);
@@ -102,7 +116,7 @@ final class InternalUserController extends Controller
         }
 
         $users = User::whereIn('id', $idsList)
-            ->with(['profile.role', 'profile.department'])
+            ->with(['profile.role', 'profile.department', 'profile.branch'])
             ->get();
 
         $data = $users->map(fn ($user) => [
@@ -112,6 +126,13 @@ final class InternalUserController extends Controller
             'last_name' => $user->profile?->last_name ?? '',
             'role' => $user->profile?->role?->name,
             'department' => $user->profile?->department?->name,
+            'branch_id' => $user->profile?->branch_id,
+            'branch' => $user->profile?->branch?->name,
+            'branch_details' => $user->profile?->branch ? [
+                'id' => $user->profile->branch->id,
+                'name' => $user->profile->branch->name,
+                'address' => $user->profile->branch->address,
+            ] : null,
         ])->values()->all();
 
         return response()->json(['data' => $data]);

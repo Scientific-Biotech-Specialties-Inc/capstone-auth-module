@@ -11,6 +11,7 @@
 import { onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
+import { isAllowedRedirectUrl } from '@/utils/redirectValidation'
 
 const route = useRoute()
 const router = useRouter()
@@ -18,9 +19,9 @@ const { logout } = useAuth()
 
 onMounted(async () => {
   await logout()
-  
-  const redirectUri = route.query.redirect_uri as string
-  if (redirectUri) {
+
+  const redirectUri = route.query.redirect_uri
+  if (typeof redirectUri === 'string' && redirectUri && isAllowedRedirectUrl(redirectUri)) {
     const separator = redirectUri.includes('?') ? '&' : '?'
     window.location.href = `${redirectUri}${separator}message=${encodeURIComponent('Successfully logged out.')}`
   } else {

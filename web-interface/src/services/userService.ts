@@ -9,6 +9,7 @@ export interface UserListParams {
   search?: string
   role_id?: string
   department_id?: string
+  branch_id?: string
   is_active?: string
   per_page?: number
 }
@@ -30,8 +31,16 @@ export const userService = {
     return api.get('/api/admin/department-options')
   },
 
+  fetchBranchOptions() {
+    return api.get('/api/admin/branch-options')
+  },
+
   assignRole(userId: number, roleId: number | string) {
     return api.patch(`/api/admin/users/${userId}/role`, { role_id: roleId })
+  },
+
+  assignBranch(userId: number, branchId: number | string | null) {
+    return api.patch(`/api/admin/users/${userId}/branch`, { branch_id: branchId || null })
   },
 
   toggleUserStatus(userId: number, password: string) {

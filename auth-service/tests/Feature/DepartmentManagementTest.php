@@ -2,14 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Role;
-use App\Models\UserProfile;
-use App\Models\Permission;
 use App\Models\Department;
+use App\Models\Permission;
+use App\Models\Role;
+use App\Models\User;
+use App\Models\UserProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class DepartmentManagementTest extends TestCase
@@ -17,8 +17,11 @@ class DepartmentManagementTest extends TestCase
     use RefreshDatabase;
 
     protected $adminUser;
+
     protected $regularUser;
+
     protected $manageDeptsPermission;
+
     protected $sessions = [];
 
     protected function setUp(): void
@@ -31,10 +34,10 @@ class DepartmentManagementTest extends TestCase
             ['slug' => 'manage-departments'],
             ['name' => 'Manage Departments']
         );
-        
+
         DB::table('role_permission')->insertOrIgnore([
             'role_id' => $itAdminRole->id,
-            'permission_id' => $this->manageDeptsPermission->id
+            'permission_id' => $this->manageDeptsPermission->id,
         ]);
 
         $this->adminUser = User::factory()->create();
@@ -43,7 +46,7 @@ class DepartmentManagementTest extends TestCase
             [
                 'first_name' => 'Admin',
                 'last_name' => 'User',
-                'role_id' => $itAdminRole->id
+                'role_id' => $itAdminRole->id,
             ]
         );
         $this->adminUser->refresh();
@@ -55,7 +58,7 @@ class DepartmentManagementTest extends TestCase
             [
                 'first_name' => 'Regular',
                 'last_name' => 'User',
-                'role_id' => $employeeRole->id
+                'role_id' => $employeeRole->id,
             ]
         );
 
@@ -66,7 +69,7 @@ class DepartmentManagementTest extends TestCase
 
     protected function setupSessionFor($user)
     {
-        $sessionId = \Illuminate\Support\Str::uuid()->toString();
+        $sessionId = Str::uuid()->toString();
         DB::table('user_sessions')->insert([
             'user_id' => $user->id,
             'session_id' => $sessionId,
@@ -76,7 +79,7 @@ class DepartmentManagementTest extends TestCase
             'last_active_at' => now(),
             'created_at' => now(),
         ]);
-        
+
         $this->sessions[$user->id] = $sessionId;
     }
 
@@ -86,24 +89,25 @@ class DepartmentManagementTest extends TestCase
         $user->save();
 
         return $this->actingAs($user, 'api')
-                    ->withHeader('X-Session-ID', $this->sessions[$user->id] ?? '');
+            ->withHeader('X-Session-ID', $this->sessions[$user->id] ?? '');
     }
 
     public function test_admin_can_list_departments()
     {
+        $initialCount = Department::count();
         Department::create(['name' => 'Engineering']);
-        
+
         $response = $this->actingAsWithSession($this->adminUser)
-                         ->getJson('/api/admin/departments');
+            ->getJson('/api/admin/departments');
 
         $response->assertStatus(200)
-                 ->assertJsonCount(1, 'data');
+            ->assertJsonCount($initialCount + 1, 'data');
     }
 
     public function test_non_admin_cannot_list_departments()
     {
         $response = $this->actingAsWithSession($this->regularUser)
-                         ->getJson('/api/admin/departments');
+            ->getJson('/api/admin/departments');
 
         $response->assertStatus(403);
     }
@@ -111,10 +115,10 @@ class DepartmentManagementTest extends TestCase
     public function test_admin_can_create_department()
     {
         $response = $this->actingAsWithSession($this->adminUser)
-                         ->postJson('/api/admin/departments', [
-                             'name' => 'Marketing',
-                             'description' => 'Marketing Dept'
-                         ]);
+            ->postJson('/api/admin/departments', [
+                'name' => 'Marketing',
+                'description' => 'Marketing Dept',
+            ]);
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('departments', ['name' => 'Marketing']);
@@ -124,12 +128,12 @@ class DepartmentManagementTest extends TestCase
     public function test_admin_can_update_department()
     {
         $dept = Department::create(['name' => 'Sales']);
-        
+
         $response = $this->actingAsWithSession($this->adminUser)
-                         ->putJson("/api/admin/departments/{$dept->id}", [
-                             'name' => 'Business Development',
-                             'description' => 'New Description'
-                         ]);
+            ->putJson("/api/admin/departments/{$dept->id}", [
+                'name' => 'Business Development',
+                'description' => 'New Description',
+            ]);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('departments', ['name' => 'Business Development']);
@@ -140,20 +144,20 @@ class DepartmentManagementTest extends TestCase
     {
         $dept = Department::create(['name' => 'HR']);
         $this->regularUser->profile->update(['department_id' => $dept->id]);
-        
+
         $response = $this->actingAsWithSession($this->adminUser)
-                         ->deleteJson("/api/admin/departments/{$dept->id}");
+            ->deleteJson("/api/admin/departments/{$dept->id}");
 
         $response->assertStatus(409)
-                 ->assertJsonFragment(['message' => 'Cannot delete department with assigned users.']);
+            ->assertJsonFragment(['message' => 'Cannot delete department with assigned users.']);
     }
 
     public function test_admin_can_delete_department_without_users()
     {
         $dept = Department::create(['name' => 'Temporary']);
-        
+
         $response = $this->actingAsWithSession($this->adminUser)
-                         ->deleteJson("/api/admin/departments/{$dept->id}");
+            ->deleteJson("/api/admin/departments/{$dept->id}");
 
         $response->assertStatus(200);
         $this->assertDatabaseMissing('departments', ['id' => $dept->id]);
@@ -166,9 +170,9 @@ class DepartmentManagementTest extends TestCase
         $targetUser = $this->regularUser;
 
         $response = $this->actingAsWithSession($this->adminUser)
-                         ->patchJson("/api/admin/users/{$targetUser->id}/department", [
-                             'department_id' => $dept->id
-                         ]);
+            ->patchJson("/api/admin/users/{$targetUser->id}/department", [
+                'department_id' => $dept->id,
+            ]);
 
         $response->assertStatus(200);
         $this->assertEquals($dept->id, $targetUser->fresh()->profile->department_id);
@@ -179,11 +183,11 @@ class DepartmentManagementTest extends TestCase
     {
         $dept = Department::create(['name' => 'Support']);
         $this->regularUser->profile->update(['department_id' => $dept->id]);
-        
+
         $response = $this->actingAsWithSession($this->adminUser)
-                         ->getJson("/api/admin/departments/{$dept->id}/users");
+            ->getJson("/api/admin/departments/{$dept->id}/users");
 
         $response->assertStatus(200)
-                 ->assertJsonStructure(['data', 'current_page', 'last_page']);
+            ->assertJsonStructure(['data', 'current_page', 'last_page']);
     }
 }

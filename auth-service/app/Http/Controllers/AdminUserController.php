@@ -27,7 +27,7 @@ class AdminUserController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['search', 'role_id', 'department_id', 'is_active']);
+        $filters = $request->only(['search', 'role_id', 'department_id', 'branch_id', 'is_active']);
         $actor = $request->user();
         $actor->loadMissing(['profile.role', 'profile.department']);
         
@@ -54,6 +54,8 @@ class AdminUserController extends Controller
             'role_name'       => 'required_without:role_id|nullable|string|exists:roles,name',
             'department_id'   => 'required_without:department_name|nullable|exists:departments,id',
             'department_name' => 'required_without:department_id|nullable|string|exists:departments,name',
+            'branch_id'       => 'nullable|exists:branches,id',
+            'branch_name'     => 'nullable|string|exists:branches,name',
         ], [
             'email.unique' => 'An account with this email already exists.',
         ]);

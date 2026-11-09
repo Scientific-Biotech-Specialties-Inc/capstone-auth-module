@@ -13,7 +13,7 @@ class UrlDecodeBearerToken
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next)
     {
         $header = $request->header('Authorization');
         if ($header && str_starts_with($header, 'Bearer ')) {

@@ -9,6 +9,9 @@ Welcome to the **Capstone Auth Module** documentation repository. This directory
 ### [Quickstart Guide](./Quickstart.md)
 Procedures for rapid local environment initialization using Docker.
 
+### [One-Shot Subagent Setup Guide](./agent-setup/SETUP-01-capstone-auth-module.md)
+Executable setup runbook for AI subagents on bare machines (zero-state installer, `USER-INPUT-GATE` secret collection, verification matrix). Feed it to a subagent to get a fully working local stack.
+
 ### [Shared Gateway Guide](./SHARED_GATEWAY_GUIDE.md)
 Detailed guide for configuring and using the shared Nginx reverse proxy gateway.
 

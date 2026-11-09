@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
-import { Loader2, X, Eye, EyeOff, Lock } from 'lucide-vue-next'
+import { ref, watch, nextTick, toRef, onMounted, onUnmounted } from 'vue'
+import { Loader2, Eye, EyeOff, Lock, ShieldAlert } from 'lucide-vue-next'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 
 const props = withDefaults(
   defineProps<{
@@ -8,14 +9,18 @@ const props = withDefaults(
     title: string
     description?: string
     confirmLabel?: string
+    cancelLabel?: string
     isSubmitting?: boolean
     error?: string
+    variant?: 'danger' | 'primary'
   }>(),
   {
     description: 'Please confirm your identity by entering your password.',
     confirmLabel: 'Confirm',
+    cancelLabel: 'Cancel',
     isSubmitting: false,
-    error: ''
+    error: '',
+    variant: 'danger'
   }
 )
 
@@ -23,6 +28,8 @@ const emit = defineEmits<{
   (e: 'close'): void
   (e: 'confirm', password: string): void
 }>()
+
+useBodyScrollLock(toRef(props, 'show'))
 
 const password = ref('')
 const showPassword = ref(false)
@@ -55,93 +62,112 @@ const handleConfirm = () => {
 const togglePasswordVisibility = () => {
   showPassword.value = !showPassword.value
 }
+
+const handleKeydown = (e: KeyboardEvent) => {
+  if (!props.show || props.isSubmitting) return
+  if (e.key === 'Escape') {
+    handleCancel()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <template>
-  <div v-if="show" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
-    <!-- Backdrop with blur -->
-    <div 
-      class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300"
-      @click="handleCancel"
-    ></div>
+  <Teleport to="body">
+    <div v-if="show" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <!-- Backdrop with blur -->
+      <div 
+        class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300"
+        @click="handleCancel"
+      ></div>
 
-    <!-- Modal Card -->
-    <div 
-      class="relative bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in duration-200"
-      role="dialog"
-      aria-modal="true"
-    >
-      <!-- Header -->
-      <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-        <div>
-          <h3 class="text-lg font-bold text-slate-900">{{ title }}</h3>
-          <p class="text-xs text-slate-500 font-medium mt-0.5">{{ description }}</p>
-        </div>
-        <button 
-          @click="handleCancel"
-          :disabled="isSubmitting"
-          class="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all disabled:opacity-50"
+      <!-- Modal Card -->
+      <div 
+        class="relative bg-white w-full max-w-sm sm:max-w-md rounded-3xl shadow-2xl overflow-hidden border border-slate-100 p-7 sm:p-8 animate-in fade-in zoom-in duration-200"
+        role="dialog"
+        aria-modal="true"
+      >
+        <!-- Centered Thematic Badge -->
+        <div 
+          class="mx-auto mb-4 sm:mb-5 w-14 h-14 rounded-full flex items-center justify-center"
+          :class="variant === 'danger' ? 'bg-rose-50 text-[#ef4444]' : 'bg-indigo-50 text-[#252578]'"
         >
-          <X :size="18" />
-        </button>
-      </div>
+          <ShieldAlert v-if="variant === 'danger'" :size="26" stroke-width="2" />
+          <Lock v-else :size="26" stroke-width="2" />
+        </div>
 
-      <!-- Content / Form -->
-      <form @submit.prevent="handleConfirm" class="p-6 space-y-4">
-        <div class="space-y-2">
-          <label for="verification-password" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">
-            Admin Password
-          </label>
-          <div class="relative">
-            <Lock class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" :size="18" />
-            <input 
-              ref="inputRef"
-              id="verification-password"
-              v-model="password"
-              :type="showPassword ? 'text' : 'password'"
-              placeholder="Enter your password..." 
-              required
-              :disabled="isSubmitting"
-              class="w-full h-11 pl-11 pr-12 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all"
-            />
-            <!-- Toggle password visibility -->
+        <!-- Title & Subtitle -->
+        <div class="text-center">
+          <h3 class="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">{{ title }}</h3>
+          <p class="mt-2 text-xs sm:text-sm text-slate-500 leading-relaxed max-w-xs sm:max-w-sm mx-auto">
+            {{ description }}
+          </p>
+        </div>
+
+        <!-- Form -->
+        <form @submit.prevent="handleConfirm" class="mt-6 space-y-4">
+          <div class="space-y-1.5 text-left">
+            <label for="verification-password" class="text-xs font-semibold text-slate-700 ml-0.5">
+              Enter your password to confirm
+            </label>
+            <div class="relative">
+              <Lock class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" :size="16" />
+              <input 
+                ref="inputRef"
+                id="verification-password"
+                v-model="password"
+                :type="showPassword ? 'text' : 'password'"
+                placeholder="Enter your current password" 
+                required
+                :disabled="isSubmitting"
+                class="w-full h-10 pl-10 pr-10 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all placeholder:text-slate-400"
+              />
+              <button 
+                type="button"
+                @click="togglePasswordVisibility"
+                :disabled="isSubmitting"
+                class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-slate-900 transition-colors"
+              >
+                <EyeOff v-if="showPassword" :size="16" />
+                <Eye v-else :size="16" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Error feedback -->
+          <div v-if="error" class="text-xs font-medium text-red-600 bg-red-50 border border-red-100 px-3.5 py-2.5 rounded-xl flex items-start gap-2">
+            <span>{{ error }}</span>
+          </div>
+
+          <!-- Actions -->
+          <div class="pt-2 flex items-center justify-center gap-3">
             <button 
               type="button"
-              @click="togglePasswordVisibility"
+              @click="handleCancel"
               :disabled="isSubmitting"
-              class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-slate-900 transition-colors"
+              class="min-w-[96px] px-5 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold transition-all disabled:opacity-50 cursor-pointer"
             >
-              <EyeOff v-if="showPassword" :size="18" />
-              <Eye v-else :size="18" />
+              {{ cancelLabel }}
+            </button>
+            <button 
+              type="submit"
+              :disabled="isSubmitting || !password"
+              class="min-w-[96px] px-5 h-10 rounded-xl text-white text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              :class="variant === 'danger' ? 'bg-[#ef4444] hover:bg-red-600 shadow-red-200' : 'bg-[#252578] hover:bg-[#1e1e66] shadow-indigo-200'"
+            >
+              <Loader2 v-if="isSubmitting" class="animate-spin" :size="16" />
+              <span>{{ isSubmitting ? 'Confirming...' : confirmLabel }}</span>
             </button>
           </div>
-        </div>
-
-        <!-- Error feedback -->
-        <div v-if="error" class="text-xs font-bold text-red-600 bg-red-50 border border-red-100 px-4 py-3 rounded-xl flex items-start gap-2">
-          <span>{{ error }}</span>
-        </div>
-
-        <!-- Actions -->
-        <div class="pt-2 flex gap-3">
-          <button 
-            type="button"
-            @click="handleCancel"
-            :disabled="isSubmitting"
-            class="flex-1 h-11 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-all border border-slate-200 disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button 
-            type="submit"
-            :disabled="isSubmitting || !password"
-            class="flex-1 h-11 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            <Loader2 v-if="isSubmitting" class="animate-spin" :size="18" />
-            <span>{{ isSubmitting ? 'Confirming...' : confirmLabel }}</span>
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
-  </div>
+  </Teleport>
 </template>

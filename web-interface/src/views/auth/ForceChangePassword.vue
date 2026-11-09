@@ -3,7 +3,6 @@ import { reactive, ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { Loader2, Eye, EyeOff, ArrowRight, LogOut, CheckCircle } from 'lucide-vue-next'
-import ToastNotification from '@/components/common/ToastNotification.vue'
 import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
@@ -117,7 +116,6 @@ const handleLogout = async () => {
 
 <template>
   <div class="login-container fade-in">
-    <ToastNotification />
 
     <!-- ── LEFT PANEL (From LoginView) ── -->
     <div class="left-panel">

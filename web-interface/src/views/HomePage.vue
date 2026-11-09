@@ -7,8 +7,9 @@
         
         <div class="flex items-center space-x-12">
           <div class="flex items-center space-x-3">
+            <img src="/images/sbsi-logo-blue.webp" alt="Scientific Biotech Specialties, Inc." class="h-6 object-contain" />
+            <div class="h-6 w-px bg-slate-200 hidden sm:block"></div>
             <span class="text-xl font-bold text-primary tracking-tight">SBSI Unified Operations Center</span>
-
           </div>
         </div>
 
@@ -87,7 +88,7 @@
     <!-- Footer Component -->
     <footer class="bg-[#07071a] border-t border-white/5 py-8 px-4 md:px-10 mt-auto w-full">
       <div class="max-w-[1300px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-        <img src="/images/SBSI-logo.png" alt="SBSI Logo" class="h-8 object-contain opacity-65" />
+        <img src="/images/sbsi-logo-variation1-white.webp" alt="SBSI Logo" class="h-6 object-contain opacity-65" />
         <span class="text-white/35 text-[13px] font-normal text-center md:text-left">
           © 2026 Scientific Biotech Specialties, Inc. All rights reserved.
         </span>
@@ -98,16 +99,27 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
+import { isItAdmin } from '@/utils/role'
+import { toast } from '@/composables/useToast'
 import { FileText, Banknote, Ticket, BarChart3, ShieldCheck, LogOut, ArrowRight } from 'lucide-vue-next'
 
 const router = useRouter()
-const { logout } = useAuth()
+const { logout, fetchCurrentUser } = useAuth()
 
 // Load user from localStorage
-const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
+function getStoredUser(): Record<string, any> {
+  const raw = localStorage.getItem('user')
+  if (!raw || raw === 'undefined' || raw === 'null') return {}
+  try {
+    return JSON.parse(raw) ?? {}
+  } catch {
+    return {}
+  }
+}
+const user = ref<any>(getStoredUser())
 
 const userName = computed(() => {
   if (user.value.profile) {
@@ -143,6 +155,19 @@ const userInitials = computed(() => {
     return name.substring(0, 2).toUpperCase()
   }
   return 'US'
+})
+
+// Refresh the user from the authoritative backend so role-gated cards reflect
+// the current server-side role instead of the one-time localStorage snapshot.
+onMounted(async () => {
+  try {
+    const result = await fetchCurrentUser()
+    if (result.success) {
+      user.value = result.user
+    }
+  } finally {
+    // fetchCurrentUser handles errors internally; this guards the await.
+  }
 })
 
 const subsystems = computed(() => {
@@ -193,17 +218,17 @@ const subsystems = computed(() => {
     }
   ]
 
-  if (userRole.value === 'IT Admin') {
-    base.push({
+  if (isItAdmin(user.value)) {
+    base.unshift({
       title: 'User & Access Management',
-      desc: 'Manage users, assign roles, define permissions, and configure departments for the entire organization.',
+      desc: 'Centralized identity authority, role-based access control (RBAC), fine-grained permission matrices, and departmental structure governance.',
       icon: ShieldCheck,
-      iconBg: 'bg-red-500 shadow-red-500/20',
+      iconBg: 'bg-[#252578] shadow-[#252578]/25',
       iconColor: 'text-white',
       badge: 'Administration',
-      badgeClass: 'text-red-500/40 bg-red-500/5',
-      bgHover: 'group-hover:bg-red-500/10',
-      bgBase: 'bg-red-500/5'
+      badgeClass: 'text-[#252578] bg-[#252578]/10 border-[#252578]/20',
+      bgHover: 'group-hover:bg-[#252578]/10',
+      bgBase: 'bg-[#252578]/5'
     })
   }
 
@@ -223,7 +248,7 @@ const openModule = (subsystemTitle: string) => {
     if (subsystemTitle === 'Contract Management') {
       if (userRole.value === 'IT Admin') {
         router.push('/admin')
-      } else if (userRole.value === 'Admin') {
+      } else if (userRole.value === 'Admin' || userRole.value === 'Super Admin' || userRole.value === 'CEO') {
         window.location.href = `${cmsUrl}/cms/auth/callback?state=/cms/admin/dashboard`
       } else if (userRole.value === 'Manager' || userRole.value === 'Finance Manager') {
         window.location.href = `${cmsUrl}/cms/auth/callback?state=/cms/manager/dashboard`
@@ -233,9 +258,7 @@ const openModule = (subsystemTitle: string) => {
         window.location.href = `${cmsUrl}/cms/auth/callback?state=/cms/dashboard`
       }
     } else if (subsystemTitle === 'Smart Expense Reimbursement') {
-      if (userRole.value === 'IT Admin') {
-        router.push('/admin')
-      } else if (userRole.value === 'Admin') {
+      if (userRole.value === 'Admin') {
         window.location.href = `${sermsUrl}/serms/auth/callback?state=/serms/admin/dashboard&message=Successfully%20logged%20in`
       } else if (userRole.value === 'Manager' || userRole.value === 'Finance Manager') {
         window.location.href = `${sermsUrl}/serms/auth/callback?state=/serms/manager/dashboard&message=Successfully%20logged%20in`
@@ -248,8 +271,10 @@ const openModule = (subsystemTitle: string) => {
       window.location.href = `${prsUrl}/prs/auth/callback?state=/prs/app/dashboard&message=Successfully%20logged%20in`
     } else if (subsystemTitle === 'User & Access Management') {
       router.push('/admin')
+    } else if (subsystemTitle === 'Ticketing System') {
+      window.location.href = '/ticketing/'
     } else {
-      alert(`${subsystemTitle} is not active in this development environment.`)
+      toast.info(`${subsystemTitle} is not active in this development environment.`)
     }
 }
 </script>

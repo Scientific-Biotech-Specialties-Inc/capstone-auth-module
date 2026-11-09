@@ -3,17 +3,20 @@ require 'vendor/autoload.php';
 $app = require_once 'bootstrap/app.php';
 $app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
 
-$user = \App\Models\User::where('email', 'finance-admin@example.com')->first();
-if(!$user) {
-    echo "User not found\n";
-    exit;
+$emails = [
+    'sales-marketing-admin@example.com',
+    'sales-marketing-manager@example.com',
+    'sales-marketing-officer@example.com'
+];
+
+foreach ($emails as $email) {
+    $user = \App\Models\User::where('email', $email)->first();
+    if (!$user) {
+        echo "$email: NOT FOUND\n";
+        continue;
+    }
+    $role = $user->profile?->role?->name ?? 'None';
+    $dept = $user->profile?->department?->name ?? 'None';
+    $hashOk = \Illuminate\Support\Facades\Hash::check('password', $user->credentials?->password_hash);
+    echo "$email | Role: $role | Dept: $dept | Password 'password' valid: " . ($hashOk ? 'YES' : 'NO') . "\n";
 }
-if(!$user->credentials) {
-    echo "Credentials not found\n";
-    exit;
-}
-echo "User ID: " . $user->id . "\n";
-echo "Password Hash: " . $user->credentials->password_hash . "\n";
-echo "Hash check for 'password': " . (\Illuminate\Support\Facades\Hash::check('password', $user->credentials->password_hash) ? 'true' : 'false') . "\n";
-echo "Hash check for 'MolleR@06202020': " . (\Illuminate\Support\Facades\Hash::check('MolleR@06202020', $user->credentials->password_hash) ? 'true' : 'false') . "\n";
-echo "is_password_changed: " . ($user->is_password_changed ? 'true' : 'false') . "\n";

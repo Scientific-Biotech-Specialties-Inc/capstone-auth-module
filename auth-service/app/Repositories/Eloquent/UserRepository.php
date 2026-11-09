@@ -82,7 +82,7 @@ class UserRepository implements UserRepositoryInterface
 
     public function paginateUsers(array $filters, int $perPage): LengthAwarePaginator
     {
-        $query = User::with(['profile.role', 'profile.department']);
+        $query = User::with(['profile.role', 'profile.department', 'profile.branch']);
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
@@ -101,6 +101,12 @@ class UserRepository implements UserRepositoryInterface
 
         if (!empty($filters['department_id'])) {
             $query->filterByDepartment($filters['department_id']);
+        }
+
+        if (!empty($filters['branch_id'])) {
+            $query->whereHas('profile', function ($q) use ($filters) {
+                $q->where('branch_id', $filters['branch_id']);
+            });
         }
 
         if (isset($filters['is_active']) && $filters['is_active'] !== '') {

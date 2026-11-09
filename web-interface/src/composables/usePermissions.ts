@@ -5,6 +5,7 @@
 import { ref } from 'vue'
 import { permissionService } from '@/services/permissionService'
 import { userService } from '@/services/userService'
+import { notifySuccess, notifyApiError } from '@/lib/notify'
 import type { Permission, Role, PermissionForm, PaginationMeta } from '@/types'
 
 export function usePermissions() {
@@ -20,13 +21,18 @@ export function usePermissions() {
   })
   const filters = ref({
     search: '',
+    role_id: '',
     per_page: 15,
   })
 
   const fetchPermissions = async (page = 1) => {
     loading.value = true
+    error.value = ''
     try {
-      const response = await permissionService.fetchPermissions({ page, ...filters.value })
+      const response = await permissionService.fetchPermissions({
+        page,
+        ...filters.value,
+      })
       permissions.value = response.data.data
       pagination.value = {
         current_page: response.data.current_page,
@@ -35,7 +41,7 @@ export function usePermissions() {
       }
     } catch (err: any) {
       console.error('Failed to fetch permissions', err)
-      error.value = 'Failed to load permissions. Please try again.'
+      error.value = 'Failed to load permissions'
     } finally {
       loading.value = false
     }
@@ -49,10 +55,12 @@ export function usePermissions() {
     error.value = ''
     try {
       await permissionService.createPermission(form)
+      notifySuccess('Permission created successfully')
       await fetchPermissions()
       return true
     } catch (err: any) {
       error.value = err.response?.data?.message || 'Something went wrong'
+      notifyApiError(err, 'permission', 'Failed to create permission.')
       return false
     } finally {
       submitting.value = false
@@ -64,10 +72,12 @@ export function usePermissions() {
     error.value = ''
     try {
       await permissionService.updatePermission(id, form)
+      notifySuccess('Permission updated successfully')
       await fetchPermissions()
       return true
     } catch (err: any) {
       error.value = err.response?.data?.message || 'Something went wrong'
+      notifyApiError(err, 'permission', 'Failed to update permission.')
       return false
     } finally {
       submitting.value = false
@@ -77,12 +87,14 @@ export function usePermissions() {
   const deletePermission = async (id: number) => {
     try {
       await permissionService.deletePermission(id)
+      notifySuccess('Permission deleted successfully')
       await fetchPermissions()
       return { success: true }
     } catch (err: any) {
+      const { message } = notifyApiError(err, 'permission', 'Failed to delete permission')
       return {
         success: false,
-        message: err.response?.data?.message || 'Failed to delete permission',
+        message: message || err.response?.data?.message || 'Failed to delete permission',
       }
     }
   }
@@ -119,9 +131,11 @@ export function usePermissions() {
     error.value = ''
     try {
       await permissionService.syncPermissionRoles(permissionId, selectedRoleIds.value)
+      notifySuccess('Permission roles updated successfully')
       return true
     } catch (err: any) {
       error.value = err.response?.data?.message || 'Failed to update roles'
+      notifyApiError(err, 'permission', 'Failed to update roles')
       return false
     } finally {
       submitting.value = false

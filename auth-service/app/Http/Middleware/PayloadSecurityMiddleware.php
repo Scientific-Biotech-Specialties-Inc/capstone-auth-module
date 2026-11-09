@@ -19,7 +19,7 @@ class PayloadSecurityMiddleware
     /**
      * Handle an incoming request.
      */
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next)
     {
         // 1. Check for the encryption header
         if (!$request->header('X-Encrypted')) {

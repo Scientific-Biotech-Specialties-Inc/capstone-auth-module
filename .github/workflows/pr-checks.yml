@@ -1,0 +1,162 @@
+name: pr-checks
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-tests:
+    name: Backend Tests & Style (auth-service)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./auth-service
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, bcmath
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ./auth-service/vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('./auth-service/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Configure Testing Environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+          php artisan passport:keys --force
+
+      - name: Code Style Check (Laravel Pint)
+        run: vendor/bin/pint --test
+        continue-on-error: true
+
+      - name: Run Backend Unit & Feature Tests
+        run: php artisan test
+
+      - name: Security Vulnerability Audit (Composer)
+        run: composer audit --locked --no-interaction
+        continue-on-error: true
+
+  frontend-unit-tests:
+    name: Frontend Unit & Integration Tests (web-interface)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./web-interface
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: ./web-interface/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Vitest Unit & Integration Suites
+        run: npm run test:unit
+
+  frontend-typecheck-build:
+    name: Frontend Typecheck & Production Build (web-interface)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./web-interface
+    env:
+      VITE_INTERNAL_ENCRYPTION_KEY: "12345678901234567890123456789012"
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: ./web-interface/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Typecheck and Production Build
+        run: npm run build
+
+  frontend-e2e-tests:
+    name: Frontend E2E Smoke Tests (Playwright)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./web-interface
+    env:
+      VITE_INTERNAL_ENCRYPTION_KEY: "12345678901234567890123456789012"
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: ./web-interface/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Application for Preview Server
+        run: npm run build
+
+      - name: Get Playwright Version
+        id: playwright-version
+        run: echo "version=$(npx playwright --version)" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright Chromium Binaries
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright Chromium with OS Dependencies
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright OS Dependencies Only
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Execute Playwright E2E Tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright Test Report on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: ./web-interface/playwright-report/
+          retention-days: 7

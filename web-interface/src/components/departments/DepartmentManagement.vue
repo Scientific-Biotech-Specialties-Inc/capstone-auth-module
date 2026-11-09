@@ -6,10 +6,12 @@ import {
   Building2
 } from 'lucide-vue-next'
 import { useDepartments } from '@/composables/useDepartments'
+import { toast } from '@/composables/useToast'
 import type { Department } from '@/types'
 import DepartmentFormModal from './DepartmentFormModal.vue'
 import DepartmentsTable from './DepartmentsTable.vue'
 import DepartmentUsersModal from './DepartmentUsersModal.vue'
+import ConfirmModal from '@/components/common/ConfirmModal.vue'
 
 const {
   departments,
@@ -66,20 +68,33 @@ const handleSubmit = async (payload: { id: number | null, name: string, descript
   }
 }
 
-const handleDelete = async (id: number) => {
+// ── Delete Confirmation ──────────────────────────────────────────────────────
+const showDeleteModal = ref(false)
+const deptToDelete = ref<Department | null>(null)
+const isDeletingDept = ref(false)
+
+const handleDelete = (id: number) => {
   const dept = departments.value.find(d => d.id === id)
   if (!dept) return
 
   if ((dept.users_count ?? 0) > 0) {
-    alert(`Cannot delete department with ${dept.users_count} assigned users.`)
+    toast.error(`Cannot delete department with ${dept.users_count} assigned users.`)
     return
   }
 
-  if (!confirm('Are you sure you want to delete this department?')) return
+  deptToDelete.value = dept
+  showDeleteModal.value = true
+}
 
-  const result = await deleteDepartmentAction(id)
-  if (!result.success) {
-    alert(result.message)
+const handleConfirmDelete = async () => {
+  if (!deptToDelete.value) return
+  isDeletingDept.value = true
+  try {
+    await deleteDepartmentAction(deptToDelete.value.id)
+  } finally {
+    isDeletingDept.value = false
+    showDeleteModal.value = false
+    deptToDelete.value = null
   }
 }
 
@@ -113,10 +128,10 @@ watch(filters, () => {
       
       <button 
         @click="openCreateModal"
-        class="inline-flex items-center gap-2 bg-gradient-to-r from-[#252578] to-[#3b82f6] text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:shadow-lg transition-all active:scale-95"
+        class="inline-flex items-center gap-2 bg-[#252578] hover:bg-[#1e1e66] text-white px-5 py-2.5 rounded-lg text-sm font-semibold shadow-sm hover:shadow-md transition-all active:scale-98 cursor-pointer"
       >
         <Plus :size="18" />
-        Create New Department
+        <span>Create New Department</span>
       </button>
     </div>
 
@@ -178,5 +193,20 @@ watch(filters, () => {
       :error="error"
       @submit="handleSubmit"
     />
+
+    <!-- Delete Confirmation Modal -->
+    <ConfirmModal
+      :show="showDeleteModal"
+      title="Delete Department"
+      confirm-label="Delete"
+      variant="danger"
+      :is-submitting="isDeletingDept"
+      @close="showDeleteModal = false"
+      @confirm="handleConfirmDelete"
+    >
+      <p>
+        Are you sure you want to permanently delete department <strong class="font-bold text-slate-800">'{{ deptToDelete?.name }}'</strong>? This action cannot be undone and the record data will be removed from the system.
+      </p>
+    </ConfirmModal>
   </div>
 </template>

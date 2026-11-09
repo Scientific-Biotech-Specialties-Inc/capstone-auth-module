@@ -3,9 +3,9 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
-import { Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-vue-next'
+import { isAllowedRedirectUrl } from '@/utils/redirectValidation'
+import { Eye, EyeOff, Loader2, ArrowLeft, Mail, Lock, ShieldCheck } from 'lucide-vue-next'
 import ForgotPasswordModal from '@/views/auth/ForgotPassword.vue'
-import ToastNotification from '@/components/common/ToastNotification.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -23,9 +23,9 @@ onMounted(() => {
     addToast({
       message: route.query.error as string,
       type: 'error',
-      duration: 5000
+      duration: 5000,
     })
-    
+
     // Clean up the URL so it doesn't persist on refresh
     const query = { ...route.query }
     delete query.error
@@ -36,7 +36,7 @@ onMounted(() => {
     addToast({
       message: route.query.message as string,
       type: 'success',
-      duration: 5000
+      duration: 5000,
     })
 
     const query = { ...route.query }
@@ -47,11 +47,12 @@ onMounted(() => {
 
 const form = reactive({
   email: '',
-  password: ''
+  password: '',
 })
 
 const showPassword = ref(false)
 const showForgot = ref(false)
+const hasRedirected = ref(false)
 
 const togglePassword = () => {
   showPassword.value = !showPassword.value
@@ -62,12 +63,17 @@ const handleLogin = async () => {
   const result = await login(form)
 
   if (result.success && result.user) {
+    // Idempotent SSO bounce: fire at most once.
+    if (hasRedirected.value) {
+      return
+    }
     const redirectUri = router.currentRoute.value.query.redirect_uri
-    if (redirectUri) {
-      let url = redirectUri as string
+    if (typeof redirectUri === 'string' && redirectUri && isAllowedRedirectUrl(redirectUri)) {
+      hasRedirected.value = true
+      let url = redirectUri
       const state = router.currentRoute.value.query.state
-      if (state) {
-        url += (url.includes('?') ? '&' : '?') + 'state=' + encodeURIComponent(state as string)
+      if (typeof state === 'string' && state) {
+        url += (url.includes('?') ? '&' : '?') + 'state=' + encodeURIComponent(state)
       }
       url += (url.includes('?') ? '&' : '?') + 'message=' + encodeURIComponent('Successfully logged in')
       window.location.href = url
@@ -78,327 +84,480 @@ const handleLogin = async () => {
     addToast({
       message: generalError.value,
       type: 'error',
-      duration: 5000
+      duration: 5000,
     })
   }
 }
 </script>
 
 <template>
-  <!-- Two-panel layout -->
-  <div class="login-container fade-in">
-    <ToastNotification />
-
-    <!-- ── LEFT PANEL ── -->
+  <div class="login-container">
+    <!-- ── LEFT PANEL (Branding & Enterprise Identity) ── -->
     <div class="left-panel">
-      <!-- Back Button -->
-      <button @click="router.push('/')" class="back-btn group">
-        <ArrowLeft :size="18" class="transition-transform group-hover:-translate-x-1" />
-        Back to Home
-      </button>
+      <!-- Background Image & Gradient Overlay -->
+      <div class="bg-image"></div>
+      <div class="overlay"></div>
 
-      <img class="bg-image" src="@/assets/login.png" alt="Login background" />
-      <div class="overlay" />
-      <div class="left-text">
-        <h1>25 Years of Innovating Diagnostics Solutions</h1>
-        <p>ISO 9001:2015 Certified</p>
+      <!-- Top Bar: Back to Home -->
+      <div class="left-top">
+        <button @click="router.push('/')" class="back-btn" aria-label="Back to Home">
+          <ArrowLeft :size="16" class="back-icon" />
+          <span>Back to Home</span>
+        </button>
+      </div>
+
+      <!-- Bottom Narrative & Certified Identity -->
+      <div class="left-content">
+        <h1 class="left-title">
+          25 Years of Innovating Diagnostics Solutions
+        </h1>
+
+        <div class="left-badge">
+          <span class="badge-dot"></span>
+          <span>ISO 9001:2015 Certified</span>
+        </div>
       </div>
     </div>
 
-    <!-- ── RIGHT PANEL ── -->
+    <!-- ── RIGHT PANEL (ONE UI Compliant Form Surface) ── -->
     <div class="right-panel">
-      <form class="form-box" @submit.prevent="handleLogin">
-
-        <h2 class="title">Welcome Back!</h2>
-        <p class="subtitle">Sign in back to SBSI SSO.</p>
-
-        <!-- EMAIL -->
-        <div class="input-wrapper">
-          <img src="@/assets/email.png" alt="Email" class="input-icon" />
-          <input
-            id="email"
-            v-model="form.email"
-            type="email"
-            placeholder="Email"
-            class="input-field"
-            :class="{ 'input-field--error': errors.email }"
-            required
-            maxlength="255"
-          />
+      <div class="login-card">
+        <!-- Header -->
+        <div class="card-head">
+          <h2 class="title">Welcome Back!</h2>
+          <p class="subtitle">Sign in to access your unified enterprise operations.</p>
         </div>
-        <p v-if="errors.email" class="field-error">{{ errors.email[0] }}</p>
 
-        <!-- PASSWORD -->
-        <div class="input-wrapper">
-          <img src="@/assets/lock.png" alt="Lock" class="input-icon" />
-          <input
-            id="password"
-            v-model="form.password"
-            :type="showPassword ? 'text' : 'password'"
-            placeholder="Password"
-            class="input-field"
-            :class="{ 'input-field--error': errors.password }"
-            required
-            maxlength="255"
-          />
+        <!-- General Error Banner -->
+        <div v-if="generalError" class="login-alert" role="alert">
+          <span>{{ generalError }}</span>
+        </div>
+
+        <!-- Login Form -->
+        <form class="form-body" @submit.prevent="handleLogin">
+          <!-- EMAIL FIELD -->
+          <div class="form-group">
+            <label for="email" class="field-label">Email Address</label>
+            <div class="input-wrapper" :class="{ 'has-error': errors.email }">
+              <Mail :size="18" class="input-icon" />
+              <input
+                id="email"
+                v-model="form.email"
+                type="email"
+                placeholder="name@sbsi.com.ph"
+                class="input-field"
+                required
+                maxlength="255"
+                autocomplete="email"
+              />
+            </div>
+            <p v-if="errors.email" class="field-error">{{ errors.email[0] }}</p>
+          </div>
+
+          <!-- PASSWORD FIELD -->
+          <div class="form-group">
+            <div class="password-label-row">
+              <label for="password" class="field-label">Password</label>
+              <button type="button" class="forgot-link" @click="showForgot = true">
+                Forgot password?
+              </button>
+            </div>
+            <div class="input-wrapper" :class="{ 'has-error': errors.password }">
+              <Lock :size="18" class="input-icon" />
+              <input
+                id="password"
+                v-model="form.password"
+                :type="showPassword ? 'text' : 'password'"
+                placeholder="Enter your password"
+                class="input-field input-field--password"
+                required
+                maxlength="255"
+                autocomplete="current-password"
+              />
+              <button
+                type="button"
+                class="eye-toggle"
+                @click="togglePassword"
+                aria-label="Toggle password visibility"
+              >
+                <Eye v-if="!showPassword" :size="18" />
+                <EyeOff v-else :size="18" />
+              </button>
+            </div>
+            <p v-if="errors.password" class="field-error">{{ errors.password[0] }}</p>
+          </div>
+
+          <!-- SUBMIT CTA BUTTON -->
           <button
-            type="button"
-            class="eye-toggle"
-            @click="togglePassword"
-            aria-label="Toggle password visibility"
+            type="submit"
+            class="login-btn"
+            :disabled="isLoading"
           >
-            <Eye v-if="!showPassword" :size="18" class="eye-icon" />
-            <EyeOff v-else :size="18" class="eye-icon" />
+            <Loader2 v-if="isLoading" class="btn-spinner" :size="18" />
+            <span>{{ isLoading ? 'Signing in...' : 'Sign In' }}</span>
           </button>
+        </form>
+
+        <!-- SECURITY NOTICE -->
+        <div class="security-footer">
+          <ShieldCheck :size="16" class="security-icon" />
+          <span>Protected by SBSI Central Identity Authority</span>
         </div>
-        <p v-if="errors.password" class="field-error">{{ errors.password[0] }}</p>
-
-        <!-- SUBMIT -->
-        <button
-          type="submit"
-          class="login-btn"
-          :disabled="isLoading"
-        >
-          <Loader2 v-if="isLoading" class="btn-spinner" :size="18" />
-          {{ isLoading ? 'Signing in...' : 'Sign In' }}
-        </button>
-
-        <!-- FORGOT PASSWORD -->
-        <div class="forgot-row">
-          <button type="button" class="forgot-link" @click="showForgot = true">
-            Forgot Password?
-          </button>
-        </div>
-
-        <!-- MODAL -->
-        <ForgotPasswordModal v-if="showForgot" @close="showForgot = false" />
-
-      </form>
+      </div>
     </div>
 
+    <!-- FORGOT PASSWORD MODAL -->
+    <ForgotPasswordModal v-if="showForgot" @close="showForgot = false" />
   </div>
 </template>
 
 <style scoped>
-/* ════════════════════════════════════════
-   LOGIN PAGE
-════════════════════════════════════════ */
+/* ==========================================================================
+   ONE UI DESIGN SYSTEM ENFORCEMENT (DESIGN.md)
+   Brand Primary: #252578 | Brand Accent: #2E85D8 | Brand Deep: #3A3A85
+   Dark Slate: #1E293B | Muted Slate: #8D8B8F | Page Background: #F8F9FA
+   ========================================================================== */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 .login-container {
   display: flex;
-  height: 100vh;
-  background: #f2f7fb;
-  font-family: "Poppins", sans-serif;
+  min-height: 100vh;
+  width: 100%;
+  background-color: #f8f9fa;
+  font-family: 'Poppins', 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #1e293b;
 }
 
-.fade-in {
-  animation: fadeIn 0.6s ease-out forwards;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* ── BACK BUTTON ── */
-.back-btn {
-  position: absolute;
-  top: 32px;
-  left: 32px;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: white;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(8px);
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  font-family: "Poppins", sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.back-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-/* ── LEFT SIDE ── */
+/* --------------------------------------------------------------------------
+   LEFT PANEL (Branding & Identity)
+   -------------------------------------------------------------------------- */
 .left-panel {
   position: relative;
   width: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 48px;
   overflow: hidden;
+  background-color: #0e0e2e;
 }
 
 .bg-image {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  background-image: url('/images/SBSI-bg.webp');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 1;
 }
 
 .overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(37, 37, 120, 0.6);
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(37, 37, 120, 0.86) 0%,
+    rgba(25, 25, 90, 0.80) 50%,
+    rgba(14, 14, 46, 0.94) 100%
+  );
+  z-index: 2;
 }
 
-.left-text {
-  position: absolute;
-  bottom: 60px;
-  left: 40px;
-  color: white;
+.left-top {
+  position: relative;
+  z-index: 3;
 }
 
-.left-text h1 {
-  font-size: 38px;
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateX(-2px);
+}
+
+.back-icon {
+  transition: transform 0.2s ease;
+}
+
+.back-btn:hover .back-icon {
+  transform: translateX(-2px);
+}
+
+.left-content {
+  position: relative;
+  z-index: 3;
+  width: fit-content;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.left-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 9999px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  align-self: flex-start;
+  backdrop-filter: blur(8px);
+}
+
+.badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.left-title {
+  font-size: clamp(28px, 3.2vw, 42px);
   font-weight: 800;
-  max-width: 380px;
-  line-height: 1.15;
-  margin: 0 0 10px 0;
+  color: #ffffff;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin-bottom: 20px;
+  text-align: left;
 }
 
-.left-text p {
-  font-size: 16px;
-  font-weight: 400;
-  margin: 0;
-  opacity: 0.9;
-}
-
-/* ── RIGHT SIDE ── */
+/* --------------------------------------------------------------------------
+   RIGHT PANEL (Form Surface & Inputs)
+   -------------------------------------------------------------------------- */
 .right-panel {
   width: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f2f7fb;
+  background-color: #f8f9fa;
+  padding: 48px;
 }
 
-.form-box {
-  width: 65%;
+.login-card {
+  width: 100%;
+  max-width: 500px;
+  background-color: #ffffff;
+  border-radius: 24px;
+  padding: 48px;
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.07), 0 0 0 1px rgba(0, 0, 0, 0.04);
 }
 
-/* TITLE */
+.card-head {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
 .title {
-  font-size: 42px;
-  font-weight: 700;
-  color: #252578;
-  margin: 0 0 8px 0;
+  font-size: 30px;
+  font-weight: 800;
+  color: #1e293b;
+  letter-spacing: -0.015em;
+  margin-bottom: 8px;
+  text-align: center;
 }
 
-/* SUBTITLE */
 .subtitle {
-  font-size: 16px;
-  font-weight: 300;
-  color: #656569;
-  margin: 0 0 28px 0;
+  font-size: 14px;
+  color: #8d8b8f;
+  line-height: 1.5;
+  text-align: center;
 }
 
-.field-error {
-  font-size: 12px;
-  color: #c0392b;
-  margin: -14px 0 12px 4px;
+.login-alert {
+  background-color: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #ef4444;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 24px;
 }
 
-/* ── INPUT WRAPPER ── */
+/* Form Groups */
+.form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.field-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #8086a3;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.password-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.forgot-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #2e85d8;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.forgot-link:hover {
+  color: #252578;
+  text-decoration: underline;
+}
+
+/* Input Wrapper & Styled Controls */
 .input-wrapper {
   position: relative;
   display: flex;
   align-items: center;
-  margin-bottom: 20px;
 }
 
 .input-icon {
   position: absolute;
   left: 16px;
-  width: 18px;
-  height: 18px;
-  opacity: 0.4;
+  color: #94a3b8;
   pointer-events: none;
 }
 
-/* INPUT FIELDS */
 .input-field {
   width: 100%;
-  padding: 16px 48px;
-  background: #ffffff;
-  border: 1px solid rgba(3, 4, 94, 0.25);
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 400;
-  color: #333;
-  font-family: "Poppins", sans-serif;
-  box-sizing: border-box;
+  height: 50px;
+  padding: 12px 16px 12px 46px;
+  background-color: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14.5px;
+  font-family: inherit;
+  color: #1e293b;
   outline: none;
-  transition: border-color 0.2s;
+  transition: all 0.2s ease;
+}
+
+.input-field--password {
+  padding-right: 46px;
 }
 
 .input-field::placeholder {
-  color: rgba(0, 0, 0, 0.35);
+  color: #94a3b8;
 }
 
 .input-field:focus {
-  border-color: #252578;
+  border-color: #2e85d8;
+  box-shadow: 0 0 0 3px rgba(46, 133, 216, 0.15);
 }
 
-.input-field--error {
-  border-color: #e74c3c;
+.input-wrapper.has-error .input-field {
+  border-color: #ef4444;
+  background-color: #fffbfb;
 }
 
-/* EYE TOGGLE */
+.field-error {
+  font-size: 12px;
+  font-weight: 500;
+  color: #ef4444;
+  margin-top: 6px;
+}
+
 .eye-toggle {
   position: absolute;
   right: 16px;
   background: none;
   border: none;
-  cursor: pointer;
   padding: 0;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  color: rgba(0, 0, 0, 0.4);
+  color: #94a3b8;
+  transition: color 0.2s ease;
 }
 
 .eye-toggle:hover {
   color: #252578;
 }
 
-/* BUTTON */
+/* Primary Button adhering to DESIGN.md Interaction Matrix */
 .login-btn {
   width: 100%;
-  padding: 16px;
-  background: #252578;
+  height: 52px;
+  margin-top: 8px;
+  background-color: #252578;
+  color: #ffffff;
   border: none;
-  border-radius: 8px;
-  color: white;
-  font-size: 18px;
+  border-radius: 10px;
+  font-size: 16px;
   font-weight: 600;
-  font-family: "Poppins", sans-serif;
+  font-family: inherit;
   cursor: pointer;
-  transition: opacity 0.2s;
-  margin-bottom: 20px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  box-shadow: 0 2px 6px rgba(37, 37, 120, 0.2);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .login-btn:hover:not(:disabled) {
-  opacity: 0.88;
+  background-color: #2f2f8e;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 37, 120, 0.3);
+}
+
+.login-btn:active:not(:disabled) {
+  background-color: #1e1e66;
+  transform: scale(0.98);
 }
 
 .login-btn:disabled {
-  background: #9999bb;
+  background-color: #94a3b8;
+  opacity: 0.7;
   cursor: not-allowed;
-  opacity: 1;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-spinner {
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
@@ -406,47 +565,49 @@ const handleLogin = async () => {
   to { transform: rotate(360deg); }
 }
 
-/* FORGOT PASSWORD */
-.forgot-row {
-  text-align: center;
+/* Security Notice */
+.security-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #8d8b8f;
+  margin-top: 28px;
 }
 
-.forgot-link {
-  font-size: 14px;
-  color: #252578;
-  font-family: "Poppins", sans-serif;
-  font-weight: 400;
-  text-decoration: none;
+.security-icon {
+  color: #10b981;
 }
 
-.forgot-link:hover {
-  text-decoration: underline;
-}
-
-/* ── Responsive ── */
-@media (max-width: 768px) {
+/* --------------------------------------------------------------------------
+   RESPONSIVE LAYOUT
+   -------------------------------------------------------------------------- */
+@media (max-width: 960px) {
   .login-container {
     flex-direction: column;
   }
 
   .left-panel {
     width: 100%;
-    height: 220px;
-    flex-shrink: 0;
+    min-height: 240px;
+    padding: 32px 24px;
+  }
+
+  .left-title {
+    font-size: 20px;
+    margin-bottom: 8px;
   }
 
   .right-panel {
     width: 100%;
-    height: auto;
     padding: 32px 16px;
   }
 
-  .form-box {
-    width: 100%;
-  }
-
-  .title {
-    font-size: 30px;
+  .login-card {
+    padding: 32px 20px;
+    box-shadow: none;
+    background: transparent;
   }
 }
 </style>

@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { 
-  Loader2,
   Building2,
   Users as UsersIcon,
   Edit2,
   Trash2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  MoreVertical
 } from 'lucide-vue-next'
 import type { Department } from '@/types'
 
@@ -30,16 +30,51 @@ const localPerPage = computed({
   get: () => props.perPage,
   set: (val) => emit('update:perPage', val)
 })
+
+const activeDropdownDeptId = ref<number | null>(null)
+const openUpward = ref(false)
+
+const toggleDropdown = (id: number, index: number, event?: MouseEvent) => {
+  if (activeDropdownDeptId.value === id) {
+    activeDropdownDeptId.value = null
+    return
+  }
+
+  const total = props.departments.length
+  let shouldOpenUp = total > 1 && (total <= 3 ? index === total - 1 : index >= total - 2)
+
+  if (event && event.currentTarget) {
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    if (spaceBelow < 190) {
+      shouldOpenUp = true
+    }
+  }
+
+  openUpward.value = shouldOpenUp
+  activeDropdownDeptId.value = id
+}
+
+const handleClickOutside = (e: MouseEvent) => {
+  const target = e.target as HTMLElement
+  if (!target.closest('.dropdown-trigger') && !target.closest('.dropdown-menu')) {
+    activeDropdownDeptId.value = null
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <template>
   <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-    <div v-if="loading" class="p-12 flex flex-col items-center justify-center gap-4 text-slate-500">
-      <Loader2 class="animate-spin" :size="32" />
-      <p class="font-medium">Loading departments...</p>
-    </div>
-
-    <div v-else-if="departments.length === 0" class="p-12 text-center">
+    <!-- Empty State (only when not loading and no results) -->
+    <div v-if="!loading && departments.length === 0" class="p-12 text-center">
       <div class="w-16 h-16 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
         <Building2 :size="32" />
       </div>
@@ -47,7 +82,8 @@ const localPerPage = computed({
       <p class="text-slate-500 mt-1">Get started by creating your first department.</p>
     </div>
 
-    <div v-else class="overflow-x-auto">
+    <!-- Table (always visible; skeleton replaces tbody rows when loading) -->
+    <div v-else class="overflow-x-auto min-h-[220px]">
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="bg-slate-50/50 border-b border-slate-100">
@@ -58,11 +94,37 @@ const localPerPage = computed({
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-50">
-          <tr 
-            v-for="dept in departments" 
-            :key="dept.id"
-            class="hover:bg-slate-50/50 transition-colors group"
-          >
+          <!-- ── Skeleton Loader Rows (DESIGN.md §VIII: skeleton for data tables) ── -->
+          <template v-if="loading">
+            <tr v-for="i in perPage" :key="`skel-${i}`" class="animate-pulse">
+              <!-- Department Name cell -->
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-slate-200 flex-shrink-0"></div>
+                  <div class="h-3 w-36 bg-slate-200 rounded"></div>
+                </div>
+              </td>
+              <!-- Description cell -->
+              <td class="px-6 py-4">
+                <div class="h-3 w-48 bg-slate-200 rounded"></div>
+              </td>
+              <!-- Users count cell -->
+              <td class="px-6 py-4 text-center">
+                <div class="h-6 w-20 bg-slate-200 rounded-full mx-auto"></div>
+              </td>
+              <!-- Actions cell -->
+              <td class="px-6 py-4">
+                <div class="h-6 w-6 bg-slate-200 rounded-lg ml-auto"></div>
+              </td>
+            </tr>
+          </template>
+          <!-- Real Data Rows -->
+          <template v-else>
+            <tr
+              v-for="(dept, index) in departments"
+              :key="dept.id"
+              class="hover:bg-slate-50/50 transition-colors group"
+            >
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-8 h-8 bg-slate-100 text-slate-600 rounded-lg flex items-center justify-center group-hover:bg-[#252578] group-hover:text-white transition-colors">
@@ -84,25 +146,53 @@ const localPerPage = computed({
                 {{ dept.users_count }} Users
               </button>
             </td>
-            <td class="px-6 py-4 text-right">
-              <div class="flex items-center justify-end gap-2">
+            <td class="px-6 py-4 text-right" :class="{ 'relative z-40': activeDropdownDeptId === dept.id }">
+              <div class="flex justify-end items-center relative" :class="{ 'z-40': activeDropdownDeptId === dept.id }">
+                <!-- 3-Dots Action Button -->
                 <button 
-                  @click="emit('open-edit-modal', dept)"
-                  class="p-2 text-slate-400 hover:text-[#252578] hover:bg-blue-50 rounded-lg transition-all"
-                  title="Edit Department"
+                  @click.stop="toggleDropdown(dept.id, index, $event)"
+                  class="dropdown-trigger p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-all cursor-pointer"
+                  title="Actions"
                 >
-                  <Edit2 :size="16" />
+                  <MoreVertical :size="18" />
                 </button>
-                <button 
-                  @click="emit('delete', dept.id)"
-                  class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                  title="Delete Department"
+
+                <!-- Dropdown Menu (Smart Auto-Flip Up/Down) -->
+                <div 
+                  v-if="activeDropdownDeptId === dept.id"
+                  class="dropdown-menu absolute right-0 z-40 bg-white border border-slate-200 rounded-xl shadow-lg p-1.5 flex flex-col gap-1 min-w-[170px] text-left animate-in fade-in duration-150"
+                  :class="openUpward ? 'bottom-full mb-1 slide-in-from-bottom-1' : 'top-full mt-1 slide-in-from-top-1'"
                 >
-                  <Trash2 :size="16" />
-                </button>
+                  <button 
+                    @click.stop="activeDropdownDeptId = null; emit('open-user-modal', dept)"
+                    class="w-full px-3 py-2 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 rounded-lg transition-all flex items-center gap-2.5 text-xs font-semibold cursor-pointer"
+                  >
+                    <UsersIcon :size="14" class="text-slate-400" />
+                    <span>View Users</span>
+                  </button>
+
+                  <button 
+                    @click.stop="activeDropdownDeptId = null; emit('open-edit-modal', dept)"
+                    class="w-full px-3 py-2 hover:bg-slate-50 text-slate-700 hover:text-slate-900 rounded-lg transition-all flex items-center gap-2.5 text-xs font-semibold cursor-pointer"
+                  >
+                    <Edit2 :size="14" class="text-slate-400" />
+                    <span>Edit Department</span>
+                  </button>
+
+                  <div class="h-px bg-slate-100 my-0.5"></div>
+
+                  <button 
+                    @click.stop="activeDropdownDeptId = null; emit('delete', dept.id)"
+                    class="w-full px-3 py-2 hover:bg-red-50 text-red-600 rounded-lg transition-all flex items-center gap-2.5 text-xs font-semibold cursor-pointer"
+                  >
+                    <Trash2 :size="14" class="text-red-500" />
+                    <span>Delete Department</span>
+                  </button>
+                </div>
               </div>
             </td>
           </tr>
+          </template>
         </tbody>
       </table>
     </div>

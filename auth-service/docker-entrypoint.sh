@@ -2,7 +2,7 @@
 set -e
 
 # Use environment variables with fallbacks
-DB_HOST=${DB_HOST:-db}
+DB_HOST=${DB_HOST:-mysql-db}
 DB_PORT=${DB_PORT:-3306}
 
 # Wait for database to be ready
@@ -45,13 +45,13 @@ if [ "${SKIP_MIGRATIONS}" != "true" ]; then
   echo "Running migrations..."
   php artisan migrate --force
 
-  # Seed only if the users table is empty (idempotent — won't overwrite real data)
-  USER_COUNT=$(php artisan tinker --execute="echo \App\Models\User::count();" 2>/dev/null | tail -1)
-  if [ "${USER_COUNT}" = "0" ] || [ -z "${USER_COUNT}" ]; then
-    echo "No users found — seeding database..."
+  # Seed only if seed accounts are missing (idempotent — won't overwrite real data)
+  ADMIN_EXISTS=$(php artisan tinker --execute="echo \App\Models\User::where('email', 'admin@example.com')->count();" 2>/dev/null | tail -1)
+  if [ "${ADMIN_EXISTS}" = "0" ] || [ -z "${ADMIN_EXISTS}" ]; then
+    echo "Seed accounts not found — seeding database..."
     php artisan db:seed --force
   else
-    echo "Database already has ${USER_COUNT} user(s) — skipping seed."
+    echo "Database already has seed accounts — skipping seed."
   fi
 
   # Generate Passport keys if missing
@@ -64,7 +64,7 @@ if [ "${SKIP_MIGRATIONS}" != "true" ]; then
   CLIENT_COUNT=$(php artisan tinker --execute="echo Laravel\Passport\Client::whereJsonContains('grant_types', 'personal_access')->count();" 2>/dev/null | tail -1)
   if [ "${CLIENT_COUNT}" = "0" ] || [ -z "${CLIENT_COUNT}" ]; then
     echo "Creating Passport Personal Access Client..."
-    php artisan passport:client --personal --no-interaction || true
+    php artisan passport:client --personal --name="Central Auth Personal Access Client" --provider=users --no-interaction || true
   fi
 
   # Fix line endings on Windows mounted volumes for OpenSSL

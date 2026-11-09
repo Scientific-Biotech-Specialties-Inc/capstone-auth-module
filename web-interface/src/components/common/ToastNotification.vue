@@ -1,46 +1,83 @@
 <template>
-  <div class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
+  <ToastViewport class="outline-none">
     <TransitionGroup name="toast">
-      <div 
+      <Toast 
         v-for="toast in toasts" 
         :key="toast.id"
-        class="toast-item pointer-events-auto flex items-center p-4 rounded-lg shadow-lg text-sm min-w-[300px] max-w-md transform transition-all"
-        :class="[
-          toast.type === 'error' ? 'bg-red-50 text-red-900 border border-red-200 shadow-red-900/10' : '',
-          toast.type === 'success' ? 'bg-green-50 text-green-900 border border-green-200 shadow-green-900/10' : '',
-          toast.type === 'info' ? 'bg-blue-50 text-blue-900 border border-blue-200 shadow-blue-900/10' : ''
-        ]"
+        class="toast-item outline-none"
+        :role="toast.type === 'error' ? 'alert' : 'status'"
+        @mouseenter="pauseToast(toast.id)"
+        @mouseleave="resumeToast(toast.id)"
       >
-        <div class="flex-1 font-medium">{{ toast.message }}</div>
-        <button 
-          @click="removeToast(toast.id)"
-          class="ml-4 opacity-60 hover:opacity-100 transition-opacity text-xl"
-          aria-label="Close"
+        <!-- Circular Thematic Icon Badge (No artificial left accent bar) -->
+        <div 
+          class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+          :class="[
+            toast.type === 'success' ? 'bg-emerald-50 text-emerald-600' : '',
+            toast.type === 'error' ? 'bg-red-50 text-red-500' : '',
+            toast.type === 'info' ? 'bg-blue-50 text-[#2E85D8]' : ''
+          ]"
         >
-          &times;
-        </button>
-      </div>
+          <CircleCheck v-if="toast.type === 'success'" :size="22" class="stroke-[2.2]" />
+          <X v-else-if="toast.type === 'error'" :size="20" class="stroke-[2.2]" />
+          <Info v-else :size="20" class="stroke-[2.2]" />
+        </div>
+
+        <!-- Toast Message Text (Medium weight, natural casing) -->
+        <ToastTitle>
+          {{ toast.message }}
+        </ToastTitle>
+
+        <!-- Dismiss Button using shadcn-vue ToastClose primitive -->
+        <ToastClose @click="removeToast(toast.id)" />
+      </Toast>
     </TransitionGroup>
-  </div>
+  </ToastViewport>
 </template>
 
 <script setup lang="ts">
+import { CircleCheck, X, Info } from 'lucide-vue-next'
 import { useToast } from '@/composables/useToast'
+import {
+  ToastViewport,
+  Toast,
+  ToastTitle,
+  ToastClose
+} from '@/components/ui/toast'
 
-const { toasts, removeToast } = useToast()
+const { toasts, removeToast, pauseToast, resumeToast } = useToast()
 </script>
 
 <style scoped>
+.toast-item {
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.10) !important;
+}
+
 .toast-enter-active,
 .toast-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .toast-enter-from {
   opacity: 0;
-  transform: translateX(30px) scale(0.95);
+  transform: translateX(40px) scale(0.95);
 }
+
 .toast-leave-to {
   opacity: 0;
-  transform: scale(0.95);
+  transform: translateX(20px) scale(0.92);
+}
+
+.toast-move {
+  transition: transform 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-enter-active,
+  .toast-leave-active,
+  .toast-move {
+    transition: none !important;
+  }
 }
 </style>

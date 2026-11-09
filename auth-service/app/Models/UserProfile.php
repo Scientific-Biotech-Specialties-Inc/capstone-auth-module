@@ -14,7 +14,8 @@ class UserProfile extends Model
         'phone',
         'address',
         'role_id',
-        'department_id'
+        'department_id',
+        'branch_id'
     ];
 
     public function user()
@@ -30,5 +31,10 @@ class UserProfile extends Model
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
     }
 }

@@ -26,6 +26,10 @@ export const authService = {
     return api.post('/api/logout')
   },
 
+  fetchMe() {
+    return api.get('/api/user')
+  },
+
   forgotPassword(email: string) {
     return api.post('/api/forgot-password', { email })
   },

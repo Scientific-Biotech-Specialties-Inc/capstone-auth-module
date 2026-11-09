@@ -3,13 +3,19 @@
 namespace Tests\Feature;
 
 use App\Jobs\SendTransactionalEmailJob;
+use App\Models\Department;
 use App\Models\EmailNotification;
+use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\DepartmentSeeder;
+use Database\Seeders\RolePermissionSeeder;
+use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class BrevoEmailNotificationTest extends TestCase
@@ -19,15 +25,15 @@ class BrevoEmailNotificationTest extends TestCase
     public function test_admin_user_creation_queues_welcome_temp_password_notification(): void
     {
         Queue::fake();
-        $this->seed(\Database\Seeders\RolePermissionSeeder::class);
-        $this->seed(\Database\Seeders\DepartmentSeeder::class);
-        $this->seed(\Database\Seeders\UserSeeder::class);
+        $this->seed(RolePermissionSeeder::class);
+        $this->seed(DepartmentSeeder::class);
+        $this->seed(UserSeeder::class);
 
         $admin = User::where('email', 'admin@example.com')->first();
         $admin->is_password_changed = true;
         $admin->save();
 
-        $sessionId = (string) \Illuminate\Support\Str::uuid();
+        $sessionId = (string) Str::uuid();
         DB::table('user_sessions')->insert([
             'user_id' => $admin->id,
             'session_id' => $sessionId,
@@ -38,8 +44,8 @@ class BrevoEmailNotificationTest extends TestCase
             'created_at' => now(),
         ]);
 
-        $role = \App\Models\Role::where('name', 'Manager')->first();
-        $department = \App\Models\Department::where('name', 'IT')->first();
+        $role = Role::where('name', 'Manager')->first();
+        $department = Department::where('name', 'IT')->first();
 
         $this->actingAs($admin, 'api')
             ->withHeader('X-Session-ID', $sessionId)
@@ -90,7 +96,7 @@ class BrevoEmailNotificationTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $sessionId = (string) \Illuminate\Support\Str::uuid();
+        $sessionId = (string) Str::uuid();
         DB::table('user_sessions')->insert([
             'user_id' => $user->id,
             'session_id' => $sessionId,
@@ -143,7 +149,7 @@ class BrevoEmailNotificationTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $sessionId = (string) \Illuminate\Support\Str::uuid();
+        $sessionId = (string) Str::uuid();
         DB::table('user_sessions')->insert([
             'user_id' => $user->id,
             'session_id' => $sessionId,
@@ -180,7 +186,11 @@ class BrevoEmailNotificationTest extends TestCase
             'payload' => ['reset_url' => 'http://localhost/reset'],
         ]);
 
-        $response = $this->postJson('/api/webhooks/brevo', [
+        $secret = (string) config('services.brevo.webhook_secret');
+        $headerName = (string) config('services.brevo.webhook_secret_header', 'X-Brevo-Webhook-Secret');
+        $headers = $secret !== '' ? [$headerName => $secret] : [];
+
+        $response = $this->withHeaders($headers)->postJson('/api/webhooks/brevo', [
             'event' => 'delivered',
             'message-id' => 'provider-message-123',
             'uuid' => 'brevo-event-1',

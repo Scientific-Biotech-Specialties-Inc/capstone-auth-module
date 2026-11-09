@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import LandingPage from "../views/LandingPage.vue";
 import LoginView from "../views/auth/LoginView.vue";
 import { clearClientAuthState, isAuthenticatedClientSide } from "@/utils/authState";
-import { isItAdmin } from "@/utils/role";
+import { canAccessAdmin } from "@/utils/role";
 import { useAuth } from "@/composables/useAuth";
 import type { FetchCurrentUserResult } from "@/composables/useAuth";
 import { toast } from "@/composables/useToast";
@@ -171,10 +171,10 @@ router.beforeEach(async (to, _from, next) => {
   // Hydrate the authoritative user only when the local snapshot is unusable:
   //  - the snapshot is missing/empty but the session cookie says we're logged in
   //    (needed for the null-safe password-change check), or
-  //  - the route requires IT Admin and the snapshot isn't IT Admin.
+  //  - the route requires Admin and the snapshot isn't IT Admin or Super Admin.
   const needsHydration =
     (requiresAuth && isAuthenticated && isEmptyUser(user)) ||
-    (requiresAdmin && !isItAdmin(user));
+    (requiresAdmin && !canAccessAdmin(user));
 
   let hydration: FetchCurrentUserResult | null = null;
   if (needsHydration) {
@@ -214,13 +214,13 @@ router.beforeEach(async (to, _from, next) => {
     return;
   }
 
-  // IT Admin gate.
-  if (requiresAdmin && !isItAdmin(user)) {
+  // Admin gate (IT Admin or Super Admin).
+  if (requiresAdmin && !canAccessAdmin(user)) {
     if (hydration) {
       if (hydration.success) {
-        // Hydrated, but the backend says this user is not an IT Admin.
+        // Hydrated, but the backend says this user is neither an IT Admin nor Super Admin.
         toast.error(
-          "Access Denied: Only IT Admin can access the authentication module interface.",
+          "Access Denied: Only IT Admin or Super Admin can access the authentication module interface.",
         );
         clearClientAuthState();
         next({ name: "login" });
@@ -229,12 +229,12 @@ router.beforeEach(async (to, _from, next) => {
 
       // Network/other failure — fall back to the snapshot. Backend
       // can:manage-users remains the real authorization boundary.
-      if (isItAdmin(user)) {
+      if (canAccessAdmin(user)) {
         next();
         return;
       }
       toast.error(
-        "Access Denied: Only IT Admin can access the authentication module interface.",
+        "Access Denied: Only IT Admin or Super Admin can access the authentication module interface.",
       );
       clearClientAuthState();
       next({ name: "login" });
@@ -243,7 +243,7 @@ router.beforeEach(async (to, _from, next) => {
 
     // Defensive: requiresAdmin without hydration performed (should not happen).
     toast.error(
-      "Access Denied: Only IT Admin can access the authentication module interface.",
+      "Access Denied: Only IT Admin or Super Admin can access the authentication module interface.",
     );
     clearClientAuthState();
     next({ name: "login" });

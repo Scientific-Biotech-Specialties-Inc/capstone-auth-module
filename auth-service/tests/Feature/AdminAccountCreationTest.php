@@ -67,6 +67,46 @@ class AdminAccountCreationTest extends TestCase
             ->assertJsonFragment(['email' => 'new.it@sbsi.com']);
     }
 
+    public function test_super_admin_can_create_account_for_any_department()
+    {
+        [$user, $sessionId] = $this->getUserWithSession('superadmin@example.com'); // Super Admin (IT)
+        $itDept = Department::where('name', 'IT')->first();
+        $role = Role::where('name', 'Manager')->first();
+
+        $response = $this->actingAs($user, 'api')
+            ->withHeader('X-Session-ID', $sessionId)
+            ->postJson('/api/admin/users', [
+                'first_name' => 'New',
+                'last_name' => 'SuperAdminCreatedUser',
+                'email' => 'new.superadmin.created@sbsi.com',
+                'role_id' => $role->id,
+                'department_id' => $itDept->id,
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonFragment(['email' => 'new.superadmin.created@sbsi.com']);
+    }
+
+    public function test_super_admin_from_non_it_department_can_create_account_for_any_department()
+    {
+        [$user, $sessionId] = $this->getUserWithSession('superadmin@sbsi.com'); // Super Admin (Executive)
+        $financeDept = Department::where('name', 'Finance')->first();
+        $role = Role::where('name', 'Manager')->first();
+
+        $response = $this->actingAs($user, 'api')
+            ->withHeader('X-Session-ID', $sessionId)
+            ->postJson('/api/admin/users', [
+                'first_name' => 'ExecutiveCreated',
+                'last_name' => 'FinanceManager',
+                'email' => 'exec.created.finance@sbsi.com',
+                'role_id' => $role->id,
+                'department_id' => $financeDept->id,
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonFragment(['email' => 'exec.created.finance@sbsi.com']);
+    }
+
     public function test_it_admin_can_create_account_with_non_sbsi_email_domain()
     {
         [$user, $sessionId] = $this->getUserWithSession('admin@example.com'); // IT Admin

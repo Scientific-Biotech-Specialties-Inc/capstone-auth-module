@@ -91,10 +91,48 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # --- Non-deployed subsystems (PRS, CMS) ---
+    # --- Subsystems ---
     location /api/prs/ { return 503 "PRS not deployed in this environment"; }
-    location /cms/     { return 503 "CMS not deployed in this environment"; }
-    location ~ ^/api/(vendor|contract|search|notification) {
-        return 503 "CMS not deployed in this environment";
+
+    # CMS frontend at /cms/ (Unified Gateway on CMS subscription)
+    location /cms/ {
+        proxy_pass ${CMS_WEB_URL}/cms/;
+        proxy_http_version 1.1;
+        proxy_ssl_server_name on;
+        proxy_ssl_protocols TLSv1.2 TLSv1.3;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $proxy_host;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 180s;
+    }
+
+    location = /cms { return 302 https://$host/cms/; }
+
+    # CMS API gateways (/api/vendor, /api/contract, /api/search, /api/notification, /api/ai, /api/analytics)
+    location ~ ^/api/(vendor|contract|search|notification|ai|analytics) {
+        client_max_body_size 25m;
+        set $auth_header $http_authorization;
+        if ($cookie_access_token) {
+            set $auth_header "Bearer $cookie_access_token";
+        }
+        proxy_set_header Authorization $auth_header;
+        proxy_set_header Cookie $http_cookie;
+        proxy_ssl_server_name on;
+        proxy_ssl_protocols TLSv1.2 TLSv1.3;
+        proxy_pass ${CMS_WEB_URL};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $proxy_host;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header Content-Type $content_type;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass_request_body on;
+        proxy_read_timeout 180s;
     }
 }

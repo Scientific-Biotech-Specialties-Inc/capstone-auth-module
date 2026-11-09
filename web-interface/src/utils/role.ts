@@ -32,3 +32,11 @@ export function isCurrentRole(user: unknown, roleName: string): boolean {
 export function isItAdmin(user: unknown): boolean {
   return isCurrentRole(user, 'it admin')
 }
+
+export function isSuperAdmin(user: unknown): boolean {
+  return isCurrentRole(user, 'super admin')
+}
+
+export function canAccessAdmin(user: unknown): boolean {
+  return isItAdmin(user) || isSuperAdmin(user)
+}

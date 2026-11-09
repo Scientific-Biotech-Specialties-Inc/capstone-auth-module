@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getCurrentRoleName, isCurrentRole, isItAdmin } from '../role'
+import { getCurrentRoleName, isCurrentRole, isItAdmin, isSuperAdmin, canAccessAdmin } from '../role'
 
 describe('role utility', () => {
   it('returns null for non-object user values', () => {
@@ -25,10 +25,33 @@ describe('role utility', () => {
     }
     expect(getCurrentRoleName(user)).toBe('it admin')
     expect(isItAdmin(user)).toBe(true)
+    expect(canAccessAdmin(user)).toBe(true)
   })
 
-  it('correctly identifies non-IT Admin users', () => {
+  it('correctly identifies Super Admin users', () => {
+    const user = {
+      profile: {
+        role: {
+          name: 'Super Admin',
+        },
+      },
+    }
+    expect(getCurrentRoleName(user)).toBe('super admin')
+    expect(isSuperAdmin(user)).toBe(true)
+    expect(canAccessAdmin(user)).toBe(true)
+  })
+
+  it('correctly identifies direct string Super Admin users', () => {
+    const user = { role: 'Super Admin' }
+    expect(getCurrentRoleName(user)).toBe('super admin')
+    expect(isSuperAdmin(user)).toBe(true)
+    expect(canAccessAdmin(user)).toBe(true)
+  })
+
+  it('correctly identifies non-admin users', () => {
     const user = { role: 'Employee' }
     expect(isItAdmin(user)).toBe(false)
+    expect(isSuperAdmin(user)).toBe(false)
+    expect(canAccessAdmin(user)).toBe(false)
   })
 })

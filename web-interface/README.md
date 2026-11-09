@@ -46,8 +46,8 @@ Before navigating, the router verifies permissions:
 const roleName = user?.profile?.role?.name || user?.role || ''
 if (requiresAuth && !token) {
   next({ name: 'login' })
-} else if (requiresAdmin && roleName !== 'IT Admin') {
-  alert('Access Denied: Only IT Admin can access the authentication module interface.')
+} else if (requiresAdmin && !['IT Admin', 'Super Admin'].includes(roleName)) {
+  alert('Access Denied: Only IT Admin or Super Admin can access the authentication module interface.')
   localStorage.removeItem('access_token')
   localStorage.removeItem('user')
   next({ name: 'login' })

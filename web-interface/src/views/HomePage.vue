@@ -102,7 +102,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
-import { isItAdmin } from '@/utils/role'
+import { canAccessAdmin } from '@/utils/role'
 import { toast } from '@/composables/useToast'
 import { FileText, Banknote, Ticket, BarChart3, ShieldCheck, LogOut, ArrowRight } from 'lucide-vue-next'
 
@@ -218,7 +218,7 @@ const subsystems = computed(() => {
     }
   ]
 
-  if (isItAdmin(user.value)) {
+  if (canAccessAdmin(user.value)) {
     base.unshift({
       title: 'User & Access Management',
       desc: 'Centralized identity authority, role-based access control (RBAC), fine-grained permission matrices, and departmental structure governance.',

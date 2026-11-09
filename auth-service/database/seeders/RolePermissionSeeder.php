@@ -86,6 +86,42 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'Manage PRS Products', 'slug' => 'prs.settings.products.manage', 'system' => 'prs'],
             ['name' => 'Manage PRS Institutions', 'slug' => 'prs.settings.institutions.manage', 'system' => 'prs'],
             ['name' => 'View PRS Files', 'slug' => 'prs.files.view', 'system' => 'prs'],
+            ['name' => 'View Own PRS Activity Log', 'slug' => 'prs.activity-log.own.view', 'system' => 'prs'],
+            ['name' => 'View Department PRS Activity Log', 'slug' => 'prs.activity-log.department.view', 'system' => 'prs'],
+            ['name' => 'View All PRS Activity Logs', 'slug' => 'prs.activity-log.all.view', 'system' => 'prs'],
+            ['name' => 'View PRS Team Dashboard', 'slug' => 'prs.dashboard.team.view', 'system' => 'prs'],
+            ['name' => 'View Own PRS Itineraries', 'slug' => 'prs.itineraries.own.view', 'system' => 'prs'],
+            ['name' => 'Update Own PRS Itineraries', 'slug' => 'prs.itineraries.own.update', 'system' => 'prs'],
+            ['name' => 'View Department PRS Itineraries', 'slug' => 'prs.itineraries.department.view', 'system' => 'prs'],
+            ['name' => 'Assign PRS Itineraries', 'slug' => 'prs.itineraries.assign', 'system' => 'prs'],
+            ['name' => 'Update Assigned PRS Itineraries', 'slug' => 'prs.itineraries.update', 'system' => 'prs'],
+            ['name' => 'Delete Assigned PRS Itineraries', 'slug' => 'prs.itineraries.delete', 'system' => 'prs'],
+            ['name' => 'Update Own PRS Submissions', 'slug' => 'prs.submissions.own.update', 'system' => 'prs'],
+            ['name' => 'Delete Own PRS Submissions', 'slug' => 'prs.submissions.own.delete', 'system' => 'prs'],
+            ['name' => 'View PRS Validation Queue', 'slug' => 'prs.validation-queue.view', 'system' => 'prs'],
+            ['name' => 'View Own PRS Performance', 'slug' => 'prs.performance.own.view', 'system' => 'prs'],
+            ['name' => 'View PRS Leaderboard Breakdown', 'slug' => 'prs.leaderboard.breakdown.view', 'system' => 'prs'],
+            ['name' => 'Export PRS Reports', 'slug' => 'prs.reports.export', 'system' => 'prs'],
+            ['name' => 'View PRS Report Archives', 'slug' => 'prs.reports.archive.view', 'system' => 'prs'],
+            ['name' => 'Create PRS Report Archives', 'slug' => 'prs.reports.archive.create', 'system' => 'prs'],
+            ['name' => 'Download PRS Report Archives', 'slug' => 'prs.reports.archive.download', 'system' => 'prs'],
+            ['name' => 'View PRS User Records', 'slug' => 'prs.settings.users.view', 'system' => 'prs'],
+            ['name' => 'View PRS Department Settings', 'slug' => 'prs.settings.departments.view', 'system' => 'prs'],
+            ['name' => 'View PRS Products', 'slug' => 'prs.settings.products.view', 'system' => 'prs'],
+            ['name' => 'View PRS Institutions', 'slug' => 'prs.settings.institutions.view', 'system' => 'prs'],
+            ['name' => 'View PRS Holidays', 'slug' => 'prs.settings.holidays.view', 'system' => 'prs'],
+            ['name' => 'Manage PRS Holidays', 'slug' => 'prs.settings.holidays.manage', 'system' => 'prs'],
+            ['name' => 'View PRS Document Templates', 'slug' => 'prs.settings.document-templates.view', 'system' => 'prs'],
+            ['name' => 'Manage PRS Document Templates', 'slug' => 'prs.settings.document-templates.manage', 'system' => 'prs'],
+            ['name' => 'Manage PRS Department OCR Policy', 'slug' => 'prs.settings.document-ocr.manage', 'system' => 'prs'],
+            ['name' => 'Create PRS Document Captures', 'slug' => 'prs.document-captures.create', 'system' => 'prs'],
+            ['name' => 'Confirm PRS Document Captures', 'slug' => 'prs.document-captures.confirm', 'system' => 'prs'],
+            ['name' => 'View PRS Document Reviews', 'slug' => 'prs.document-reviews.view', 'system' => 'prs'],
+            ['name' => 'View Own PRS Files', 'slug' => 'prs.files.own.view', 'system' => 'prs'],
+            ['name' => 'View Department PRS Files', 'slug' => 'prs.files.department.view', 'system' => 'prs'],
+            ['name' => 'View All PRS Files', 'slug' => 'prs.files.all.view', 'system' => 'prs'],
+            ['name' => 'View PRS Manager Analytics', 'slug' => 'prs.manager-analytics.view', 'system' => 'prs'],
+            ['name' => 'Manage PRS Manager Analytics', 'slug' => 'prs.manager-analytics.manage', 'system' => 'prs'],
             // SERMS Permissions
             ['name' => 'Manage Reimbursements', 'slug' => 'serms.reimbursements.manage', 'system' => 'serms'],
             ['name' => 'Manage Liquidations',   'slug' => 'serms.liquidations.manage',   'system' => 'serms'],
@@ -128,9 +164,6 @@ class RolePermissionSeeder extends Seeder
                 'cms.partners.view',  'cms.partners.create',  'cms.partners.edit',  'cms.partners.delete',
                 'manage-users',
                 'serms.reimbursements.manage', 'serms.liquidations.manage', 'serms.cash_advances.manage',
-                'prs.dashboard.view', 'prs.activity-log.view', 'prs.submissions.create', 'prs.submission.validate',
-                'prs.itineraries.manage', 'prs.leaderboard.view', 'prs.reports.view', 'prs.settings.users.manage',
-                'prs.settings.departments.manage', 'prs.settings.products.manage', 'prs.settings.institutions.manage', 'prs.files.view',
             ])->get();
             $cmsAdmin->permissions()->syncWithoutDetaching($adminPerms->pluck('id'));
         }
@@ -175,8 +208,6 @@ class RolePermissionSeeder extends Seeder
                 'cms.users.view',
                 'cms.partners.view',  'cms.partners.create',  'cms.partners.edit',
                 'serms.reimbursements.manage', 'serms.liquidations.manage', 'serms.cash_advances.manage',
-                'prs.dashboard.view', 'prs.activity-log.view', 'prs.submissions.create', 'prs.submission.validate',
-                'prs.itineraries.manage', 'prs.leaderboard.view', 'prs.reports.view', 'prs.files.view',
             ])->get();
             $cmsManager->permissions()->syncWithoutDetaching($managerPerms->pluck('id'));
         }
@@ -198,43 +229,79 @@ class RolePermissionSeeder extends Seeder
                 'cms.users.view',
                 'cms.partners.view',  'cms.partners.create',  'cms.partners.edit',
                 'serms.reimbursements.manage', 'serms.liquidations.manage', 'serms.cash_advances.manage',
-                'prs.dashboard.view', 'prs.activity-log.view', 'prs.submissions.create', 'prs.submission.validate',
-                'prs.itineraries.manage', 'prs.leaderboard.view', 'prs.reports.view', 'prs.settings.users.manage',
-                'prs.settings.departments.manage', 'prs.settings.products.manage', 'prs.settings.institutions.manage', 'prs.files.view',
             ])->get();
             $financeManager->permissions()->syncWithoutDetaching($managerPerms->pluck('id'));
         }
 
 
-        // PRS role assignments
-        $prsAllPerms = \App\Models\Permission::where('system', 'prs')->get();
-        $prsBasicPerms = \App\Models\Permission::whereIn('slug', [
-            'prs.dashboard.view',
-            'prs.activity-log.view',
-            'prs.submissions.create',
-            'prs.leaderboard.view',
-            'prs.files.view',
-        ])->get();
+        // PRS defaults
+        $prsGrants = [
+            'Employee' => [
+                'prs.dashboard.view', 'prs.activity-log.own.view',
+                'prs.submissions.create', 'prs.submissions.own.update',
+                'prs.submissions.own.delete', 'prs.performance.own.view',
+                'prs.settings.products.view', 'prs.settings.institutions.view',
+                'prs.settings.holidays.view', 'prs.settings.document-templates.view',
+                'prs.document-captures.create', 'prs.document-captures.confirm',
+                'prs.files.own.view', 'prs.itineraries.own.view',
+                'prs.itineraries.own.update', 'prs.leaderboard.view',
+                'prs.leaderboard.breakdown.view',
+            ],
+            'Supervisor' => [
+                'prs.dashboard.view', 'prs.dashboard.team.view',
+                'prs.activity-log.department.view', 'prs.itineraries.department.view',
+                'prs.validation-queue.view', 'prs.submission.validate',
+                'prs.leaderboard.view', 'prs.leaderboard.breakdown.view',
+                'prs.settings.products.view', 'prs.settings.institutions.view',
+                'prs.settings.holidays.view', 'prs.settings.document-templates.view',
+                'prs.document-reviews.view', 'prs.files.department.view',
+            ],
+            'Manager' => [
+                'prs.dashboard.view', 'prs.dashboard.team.view',
+                'prs.activity-log.department.view', 'prs.itineraries.department.view',
+                'prs.validation-queue.view', 'prs.reports.view', 'prs.reports.export',
+                'prs.reports.archive.view', 'prs.reports.archive.create',
+                'prs.reports.archive.download', 'prs.settings.users.view',
+                'prs.settings.users.manage', 'prs.settings.departments.view',
+                'prs.settings.departments.manage', 'prs.settings.products.view',
+                'prs.settings.products.manage', 'prs.settings.institutions.view',
+                'prs.settings.institutions.manage', 'prs.settings.holidays.view',
+                'prs.settings.document-templates.view',
+                'prs.settings.document-templates.manage',
+                'prs.settings.document-ocr.manage', 'prs.document-reviews.view',
+                'prs.files.department.view', 'prs.manager-analytics.view',
+                'prs.manager-analytics.manage', 'prs.itineraries.assign',
+                'prs.itineraries.update', 'prs.itineraries.delete',
+                'prs.leaderboard.view', 'prs.leaderboard.breakdown.view',
+            ],
+            'Admin' => [
+                'prs.dashboard.view', 'prs.dashboard.team.view',
+                'prs.activity-log.all.view', 'prs.validation-queue.view',
+                'prs.leaderboard.view', 'prs.leaderboard.breakdown.view',
+                'prs.reports.view', 'prs.reports.export',
+                'prs.reports.archive.view', 'prs.reports.archive.create',
+                'prs.reports.archive.download', 'prs.settings.users.view',
+                'prs.settings.users.manage', 'prs.settings.departments.view',
+                'prs.settings.departments.manage', 'prs.settings.products.view',
+                'prs.settings.products.manage', 'prs.settings.institutions.view',
+                'prs.settings.institutions.manage', 'prs.settings.holidays.view',
+                'prs.settings.holidays.manage', 'prs.settings.document-templates.view',
+                'prs.settings.document-templates.manage',
+                'prs.settings.document-ocr.manage', 'prs.document-reviews.view',
+                'prs.files.all.view',
+            ],
+        ];
+        $prsGrants['Super Admin'] = \App\Models\Permission::where('system', 'prs')
+            ->whereNotIn('slug', ['prs.reports.archive.delete'])
+            ->pluck('slug')->all();
 
-        $prsValidationPerms = \App\Models\Permission::whereIn('slug', [
-            'prs.dashboard.view',
-            'prs.activity-log.view',
-            'prs.submission.validate',
-            'prs.itineraries.manage',
-            'prs.leaderboard.view',
-            'prs.files.view',
-        ])->get();
-
-        foreach (\App\Models\Role::whereIn('name', ['Super Admin', 'IT Admin', 'Admin'])->get() as $role) {
-            $role->permissions()->syncWithoutDetaching($prsAllPerms->pluck('id'));
-        }
-
-        foreach (\App\Models\Role::whereIn('name', ['Manager', 'Finance Manager', 'Supervisor'])->get() as $role) {
-            $role->permissions()->syncWithoutDetaching($prsValidationPerms->pluck('id'));
-        }
-
-        foreach (\App\Models\Role::whereIn('name', ['Sales', 'Employee', 'Finance', 'Finance Employee', 'Accountant', 'Engineer'])->get() as $role) {
-            $role->permissions()->syncWithoutDetaching($prsBasicPerms->pluck('id'));
+        foreach ($prsGrants as $roleName => $slugs) {
+            $role = \App\Models\Role::where('name', $roleName)->first();
+            if ($role) {
+                $role->permissions()->syncWithoutDetaching(
+                    \App\Models\Permission::whereIn('slug', $slugs)->pluck('id')
+                );
+            }
         }
 
         // 4. CMS Sales ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â limited, view-only on most; own-record access enforced by app logic

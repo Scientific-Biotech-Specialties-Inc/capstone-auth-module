@@ -17,6 +17,7 @@ import {
 } from 'lucide-vue-next'
 import sidebarLogo from '@/assets/logo.png'
 import { useAuth } from '@/composables/useAuth'
+import ConfirmModal from '@/components/common/ConfirmModal.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -83,11 +84,24 @@ const closeUserMenu = () => {
   isUserMenuOpen.value = false
 }
 
-// ── Logout Handler ────────────────────────────────────────────────────────────
-const handleLogout = async () => {
+// ── Logout Handlers & Confirmation Modal ──────────────────────────────────────
+const showLogoutConfirmModal = ref(false)
+const isLoggingOut = ref(false)
+
+const handleLogout = () => {
   closeUserMenu()
-  await logout()
-  router.push({ name: 'login', query: { message: 'Successfully logged out.' } })
+  showLogoutConfirmModal.value = true
+}
+
+const confirmLogout = async () => {
+  try {
+    isLoggingOut.value = true
+    await logout()
+    showLogoutConfirmModal.value = false
+    router.push({ name: 'login', query: { message: 'Successfully logged out.' } })
+  } finally {
+    isLoggingOut.value = false
+  }
 }
 
 // ── Idle Logout Logic (2 hours) ───────────────────────────────────────────────
@@ -145,8 +159,8 @@ onUnmounted(() => {
     >
       <!-- Top Brand Lockup & Navigation -->
       <div class="flex flex-col flex-1 overflow-y-auto overflow-x-hidden scrollbar-none">
-        <!-- Subsystem Brand Lockup -->
-        <div class="p-6 pb-5 border-b border-white/10 flex items-center gap-3.5">
+        <!-- Subsystem Brand Lockup (72px aligned with top header) -->
+        <div class="h-18 px-6 border-b border-white/10 flex items-center gap-3.5 flex-shrink-0">
           <router-link to="/home" class="flex items-center gap-2.5 group w-full" :title="isSidebarCollapsed ? 'SBSI Home' : ''">
             <div class="h-8 w-8 rounded-lg bg-white flex items-center justify-center flex-shrink-0 group-hover:bg-slate-100 transition-all p-1 shadow-sm">
               <img :src="sidebarLogo" alt="SBSI" class="h-5 w-auto object-contain" />
@@ -302,8 +316,8 @@ onUnmounted(() => {
       class="flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out"
       :class="isSidebarCollapsed ? 'pl-[88px]' : 'pl-64'"
     >
-      <!-- Top Header Component (Pure White, Shadow-sm, ONE UI Spec) -->
-      <header class="sticky top-0 z-20 h-18 bg-white border-b border-slate-200/80 shadow-sm px-6 flex items-center justify-between">
+      <!-- Top Header Component (Pure White, 72px / h-18, Shadow-sm, ONE UI Spec) -->
+      <header class="sticky top-0 z-20 h-18 min-h-[72px] bg-white border-b border-slate-200/80 shadow-sm px-6 flex items-center justify-between">
         <!-- Left Section: Toggle -->
         <div class="flex items-center gap-4">
           <button 
@@ -334,8 +348,8 @@ onUnmounted(() => {
               @click="toggleUserMenu"
               class="flex items-center gap-3 p-1.5 pr-2.5 rounded-xl hover:bg-slate-100/80 transition-all cursor-pointer select-none"
             >
-              <!-- Avatar Circle: #A7A7C8 with bold white initials -->
-              <div class="w-9 h-9 rounded-full bg-[#A7A7C8] flex items-center justify-center text-white text-xs font-bold shadow-inner">
+              <!-- Avatar Circle: Dark Blue (#252578) with #A7A7C8 border ring and bold white initials -->
+              <div class="w-9 h-9 rounded-full bg-[#252578] border-2 border-[#A7A7C8] flex items-center justify-center text-white text-xs font-bold shadow-sm">
                 {{ userInitials }}
               </div>
 
@@ -402,6 +416,19 @@ onUnmounted(() => {
         </router-view>
       </main>
     </div>
+
+    <!-- Global Logout Confirmation Modal -->
+    <ConfirmModal
+      :show="showLogoutConfirmModal"
+      title="Confirm Logout"
+      description="Are you sure you want to end your active session? You will be redirected to the sign-in screen."
+      confirmLabel="Log Out"
+      cancelLabel="Cancel"
+      variant="logout"
+      :isSubmitting="isLoggingOut"
+      @close="showLogoutConfirmModal = false"
+      @confirm="confirmLogout"
+    />
   </div>
 </template>
 

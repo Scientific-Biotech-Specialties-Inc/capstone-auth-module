@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { 
-  Loader2, 
   MapPin, 
   Users, 
   Edit2, 
@@ -34,8 +33,27 @@ const internalPerPage = computed({
 })
 
 const activeDropdownBranchId = ref<number | null>(null)
-const toggleDropdown = (id: number) => {
-  activeDropdownBranchId.value = activeDropdownBranchId.value === id ? null : id
+const openUpward = ref(false)
+
+const toggleDropdown = (id: number, index: number, event?: MouseEvent) => {
+  if (activeDropdownBranchId.value === id) {
+    activeDropdownBranchId.value = null
+    return
+  }
+
+  const total = props.branches.length
+  let shouldOpenUp = total > 1 && (total <= 3 ? index === total - 1 : index >= total - 2)
+
+  if (event && event.currentTarget) {
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    if (spaceBelow < 190) {
+      shouldOpenUp = true
+    }
+  }
+
+  openUpward.value = shouldOpenUp
+  activeDropdownBranchId.value = id
 }
 
 const handleClickOutside = (e: MouseEvent) => {
@@ -56,25 +74,20 @@ onUnmounted(() => {
 
 <template>
   <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-    <div v-if="loading" class="p-16 flex flex-col items-center justify-center gap-4 text-slate-500">
-      <Loader2 class="animate-spin text-[#252578]" :size="32" />
-      <p class="font-medium text-sm">Loading branches...</p>
-    </div>
-
     <!-- Error State -->
-    <div v-else-if="error && branches.length === 0" class="p-16 text-center">
+    <div v-if="error && branches.length === 0 && !loading" class="p-16 text-center">
       <AlertCircle class="mx-auto mb-3 text-red-400" :size="32" />
       <p class="text-red-600 font-medium">{{ error }}</p>
     </div>
 
     <!-- Empty State -->
-    <div v-else-if="branches.length === 0" class="p-16 text-center text-slate-500">
+    <div v-else-if="!loading && branches.length === 0" class="p-16 text-center text-slate-500">
       <MapPin class="mx-auto mb-3 text-slate-400" :size="32" />
       <p class="font-medium">No branches found matching your search.</p>
     </div>
 
-    <!-- Table -->
-    <div v-else class="overflow-x-auto">
+    <!-- Table (always visible; skeleton replaces tbody rows when loading) -->
+    <div v-else class="overflow-x-auto min-h-[220px]">
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="border-b border-slate-100 bg-slate-50/50">
@@ -85,7 +98,33 @@ onUnmounted(() => {
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-50">
-          <tr v-for="branch in branches" :key="branch.id" class="hover:bg-slate-50/50 transition-colors">
+          <!-- ── Skeleton Loader Rows (DESIGN.md §VIII: skeleton for data tables) ── -->
+          <template v-if="loading">
+            <tr v-for="i in perPage" :key="`skel-${i}`" class="animate-pulse">
+              <!-- Branch Name cell -->
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-slate-200 flex-shrink-0"></div>
+                  <div class="h-3 w-32 bg-slate-200 rounded"></div>
+                </div>
+              </td>
+              <!-- Address cell -->
+              <td class="px-6 py-4">
+                <div class="h-3 w-48 bg-slate-200 rounded"></div>
+              </td>
+              <!-- Users count cell -->
+              <td class="px-6 py-4 text-center">
+                <div class="h-6 w-20 bg-slate-200 rounded-full mx-auto"></div>
+              </td>
+              <!-- Actions cell -->
+              <td class="px-6 py-4">
+                <div class="h-6 w-6 bg-slate-200 rounded-lg ml-auto"></div>
+              </td>
+            </tr>
+          </template>
+          <!-- Real Data Rows -->
+          <template v-else>
+            <tr v-for="(branch, index) in branches" :key="branch.id" class="hover:bg-slate-50/50 transition-colors">
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-lg bg-indigo-50 text-[#252578] flex items-center justify-center flex-shrink-0">
@@ -108,21 +147,22 @@ onUnmounted(() => {
                 {{ branch.users_count ?? 0 }} Users
               </span>
             </td>
-            <td class="px-6 py-4 text-right relative">
-              <div class="flex justify-end items-center relative">
+            <td class="px-6 py-4 text-right" :class="{ 'relative z-40': activeDropdownBranchId === branch.id }">
+              <div class="flex justify-end items-center relative" :class="{ 'z-40': activeDropdownBranchId === branch.id }">
                 <!-- 3-Dots Trigger -->
                 <button 
-                  @click.stop="toggleDropdown(branch.id)"
+                  @click.stop="toggleDropdown(branch.id, index, $event)"
                   class="dropdown-trigger p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-all cursor-pointer"
                   title="Actions"
                 >
                   <MoreVertical :size="18" />
                 </button>
 
-                <!-- Dropdown Menu -->
+                <!-- Dropdown Menu (Smart Auto-Flip Up/Down) -->
                 <div 
                   v-if="activeDropdownBranchId === branch.id"
-                  class="dropdown-menu absolute right-0 top-full mt-1 z-30 bg-white border border-slate-200 rounded-xl shadow-lg p-1.5 flex flex-col gap-1 min-w-[150px] text-left animate-in fade-in slide-in-from-top-1 duration-150"
+                  class="dropdown-menu absolute right-0 z-40 bg-white border border-slate-200 rounded-xl shadow-lg p-1.5 flex flex-col gap-1 min-w-[150px] text-left animate-in fade-in duration-150"
+                  :class="openUpward ? 'bottom-full mb-1 slide-in-from-bottom-1' : 'top-full mt-1 slide-in-from-top-1'"
                 >
                   <button 
                     @click.stop="activeDropdownBranchId = null; emit('open-edit-modal', branch)"
@@ -145,6 +185,7 @@ onUnmounted(() => {
               </div>
             </td>
           </tr>
+          </template>
         </tbody>
       </table>
     </div>

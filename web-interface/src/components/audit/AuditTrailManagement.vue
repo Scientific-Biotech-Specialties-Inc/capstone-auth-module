@@ -278,7 +278,7 @@ const formatActionTitle = (action: string) => {
               <!-- Actor Cell with Avatar Circle -->
               <td class="px-6 py-3.5">
                 <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-full bg-[#A7A7C8] flex items-center justify-center text-white text-[11px] font-bold shadow-sm flex-shrink-0">
+                  <div class="w-8 h-8 rounded-full bg-[#252578] flex items-center justify-center text-white text-[11px] font-bold shadow-sm flex-shrink-0">
                     {{ getInitials(log.actor?.first_name, log.actor?.last_name, log.actor?.email) }}
                   </div>
                   <div class="flex flex-col">

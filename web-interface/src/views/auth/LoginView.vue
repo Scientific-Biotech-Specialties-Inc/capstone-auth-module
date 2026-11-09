@@ -252,7 +252,7 @@ const handleLogin = async () => {
   inset: 0;
   width: 100%;
   height: 100%;
-  background-image: url('/images/SBSI-bg.png');
+  background-image: url('/images/SBSI-bg.webp');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

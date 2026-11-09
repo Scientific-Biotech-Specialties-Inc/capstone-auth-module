@@ -15,20 +15,8 @@ class BranchSeeder extends Seeder
     {
         $branches = [
             [
-                'name' => 'Main Office - Head Office',
-                'address' => '604 SBSI Building, Ermita, Manila, Metro Manila',
-            ],
-            [
-                'name' => 'Makati Commercial Branch',
-                'address' => 'Ayala Triangle, Makati City, Metro Manila',
-            ],
-            [
-                'name' => 'Cebu Regional Hub',
-                'address' => 'Cebu Business Park, Cebu City, Cebu',
-            ],
-            [
-                'name' => 'Davao Operations Branch',
-                'address' => 'Bajada Commercial Center, Davao City, Davao del Sur',
+                'name' => 'Main Office',
+                'address' => 'Makati City, Metro Manila',
             ],
         ];
 
@@ -36,7 +24,7 @@ class BranchSeeder extends Seeder
             Branch::firstOrCreate(['name' => $branchData['name']], $branchData);
         }
 
-        $mainBranch = Branch::where('name', 'Main Office - Head Office')->first();
+        $mainBranch = Branch::where('name', 'Main Office')->first();
         if ($mainBranch) {
             UserProfile::whereNull('branch_id')->update(['branch_id' => $mainBranch->id]);
         }

@@ -4,36 +4,26 @@
       <Toast 
         v-for="toast in toasts" 
         :key="toast.id"
-        class="toast-item !border-0 !border-none !outline-none"
+        class="toast-item outline-none"
         :role="toast.type === 'error' ? 'alert' : 'status'"
         @mouseenter="pauseToast(toast.id)"
         @mouseleave="resumeToast(toast.id)"
       >
-        <!-- Accent indicator bar on the left edge (flush with card boundary, no white border) -->
+        <!-- Circular Thematic Icon Badge (No artificial left accent bar) -->
         <div 
-          class="absolute inset-y-0 left-0 w-1.5"
+          class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
           :class="[
-            toast.type === 'success' ? 'bg-emerald-500' : '',
-            toast.type === 'error' ? 'bg-red-500' : '',
-            toast.type === 'info' ? 'bg-[#2E85D8]' : ''
-          ]"
-        ></div>
-
-        <!-- Circular Icon Badge -->
-        <div 
-          class="w-12 h-12 rounded-full flex items-center justify-center shrink-0 ml-1.5"
-          :class="[
-            toast.type === 'success' ? 'bg-emerald-50 text-emerald-500' : '',
+            toast.type === 'success' ? 'bg-emerald-50 text-emerald-600' : '',
             toast.type === 'error' ? 'bg-red-50 text-red-500' : '',
             toast.type === 'info' ? 'bg-blue-50 text-[#2E85D8]' : ''
           ]"
         >
-          <CircleCheck v-if="toast.type === 'success'" :size="26" class="stroke-[2.5]" />
-          <X v-else-if="toast.type === 'error'" :size="24" class="stroke-[2.5]" />
-          <Info v-else :size="24" class="stroke-[2.5]" />
+          <CircleCheck v-if="toast.type === 'success'" :size="22" class="stroke-[2.2]" />
+          <X v-else-if="toast.type === 'error'" :size="20" class="stroke-[2.2]" />
+          <Info v-else :size="20" class="stroke-[2.2]" />
         </div>
 
-        <!-- Toast Message Text (Sentence-case transformed to uppercase via CSS) -->
+        <!-- Toast Message Text (Medium weight, natural casing) -->
         <ToastTitle>
           {{ toast.message }}
         </ToastTitle>
@@ -60,9 +50,8 @@ const { toasts, removeToast, pauseToast, resumeToast } = useToast()
 
 <style scoped>
 .toast-item {
-  border: none !important;
-  outline: none !important;
-  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.12) !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.10) !important;
 }
 
 .toast-enter-active,

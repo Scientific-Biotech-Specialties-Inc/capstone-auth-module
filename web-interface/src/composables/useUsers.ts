@@ -132,6 +132,26 @@ export function useUsers() {
     }
   }
 
+  // ── Branch Assignment ──────────────────────────────────────────────────────
+  const isAssigningBranch = ref(false)
+
+  const assignBranch = async (userId: number, branchId: number | string | null) => {
+    isAssigningBranch.value = true
+    try {
+      await userService.assignBranch(userId, branchId)
+      notifySuccess('Branch assigned successfully')
+      return { success: true }
+    } catch (err: any) {
+      const { message } = notifyApiError(err, 'branch', 'Failed to assign branch')
+      return {
+        success: false,
+        message: message || err.response?.data?.message || 'Failed to assign branch',
+      }
+    } finally {
+      isAssigningBranch.value = false
+    }
+  }
+
   // ── Status Toggle ──────────────────────────────────────────────────────────
   const isTogglingStatus = ref(false)
   const confirmPasswordError = ref('')
@@ -187,6 +207,9 @@ export function useUsers() {
     // Role Assignment
     isAssigning,
     assignRole,
+    // Branch Assignment
+    isAssigningBranch,
+    assignBranch,
     // Status Toggle
     isTogglingStatus,
     confirmPasswordError,

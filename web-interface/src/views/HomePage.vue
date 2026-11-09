@@ -7,7 +7,7 @@
         
         <div class="flex items-center space-x-12">
           <div class="flex items-center space-x-3">
-            <img src="/images/SBSI-logo.png" alt="Scientific Biotech Specialties, Inc." class="h-9 object-contain" />
+            <img src="/images/sbsi-logo-blue.webp" alt="Scientific Biotech Specialties, Inc." class="h-6 object-contain" />
             <div class="h-6 w-px bg-slate-200 hidden sm:block"></div>
             <span class="text-xl font-bold text-primary tracking-tight">SBSI Unified Operations Center</span>
           </div>
@@ -88,7 +88,7 @@
     <!-- Footer Component -->
     <footer class="bg-[#07071a] border-t border-white/5 py-8 px-4 md:px-10 mt-auto w-full">
       <div class="max-w-[1300px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-        <img src="/images/SBSI-logo.png" alt="SBSI Logo" class="h-8 object-contain opacity-65" />
+        <img src="/images/sbsi-logo-variation1-white.webp" alt="SBSI Logo" class="h-6 object-contain opacity-65" />
         <span class="text-white/35 text-[13px] font-normal text-center md:text-left">
           © 2026 Scientific Biotech Specialties, Inc. All rights reserved.
         </span>

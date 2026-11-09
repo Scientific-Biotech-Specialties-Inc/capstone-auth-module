@@ -27,7 +27,7 @@ class AdminUserController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['search', 'role_id', 'department_id', 'is_active']);
+        $filters = $request->only(['search', 'role_id', 'department_id', 'branch_id', 'is_active']);
         $actor = $request->user();
         $actor->loadMissing(['profile.role', 'profile.department']);
         

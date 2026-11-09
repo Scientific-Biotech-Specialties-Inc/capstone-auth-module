@@ -8,6 +8,7 @@ services:
       - ./auth-service:/var/www/html
       - auth-service-vendor:/var/www/html/vendor
     environment:
+      - SKIP_MIGRATIONS=${SKIP_MIGRATIONS:-false}
       - APP_ENV=${APP_ENV}
       - APP_DEBUG=${APP_DEBUG}
       - DB_CONNECTION=${DB_CONNECTION}
@@ -49,8 +50,8 @@ services:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/up"]
       interval: 5s
       timeout: 3s
-      retries: 10
-      start_period: 10s
+      retries: 20
+      start_period: 90s
     networks:
       - shared-capstone-network
 
@@ -64,6 +65,7 @@ services:
       - ./auth-service:/var/www/html
       - auth-service-vendor:/var/www/html/vendor
     environment:
+      - APP_NAME=${APP_NAME}
       - APP_ENV=${APP_ENV}
       - APP_DEBUG=${APP_DEBUG}
       - DB_CONNECTION=${DB_CONNECTION}

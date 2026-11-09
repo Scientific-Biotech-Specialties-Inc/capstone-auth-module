@@ -8,6 +8,7 @@ import {
 import ConfirmPasswordModal from '../common/ConfirmPasswordModal.vue'
 import UsersTable from './UsersTable.vue'
 import AssignRoleModal from './AssignRoleModal.vue'
+import AssignBranchModal from './AssignBranchModal.vue'
 import type { User } from '@/types'
 
 const {
@@ -22,6 +23,8 @@ const {
   fetchMetadata,
   isAssigning,
   assignRole,
+  isAssigningBranch,
+  assignBranch,
   isTogglingStatus,
   confirmPasswordError,
   toggleUserStatus,
@@ -68,6 +71,26 @@ const handleAssignRole = async () => {
   const result = await assignRole(selectedUser.value.id, selectedRoleId.value)
   if (result.success) {
     showRoleModal.value = false
+    fetchUsers(pagination.value.current_page)
+  }
+}
+
+// ── Branch Assignment Modal ─────────────────────────────────────────────────
+const showBranchModal = ref(false)
+const selectedBranchId = ref<number | string | null>('')
+
+const openBranchModal = (user: User) => {
+  selectedUser.value = user
+  selectedBranchId.value = user.profile?.branch?.id ?? null
+  showBranchModal.value = true
+}
+
+const handleAssignBranch = async () => {
+  if (!selectedUser.value) return
+
+  const result = await assignBranch(selectedUser.value.id, selectedBranchId.value)
+  if (result.success) {
+    showBranchModal.value = false
     fetchUsers(pagination.value.current_page)
   }
 }
@@ -176,6 +199,7 @@ const handleConfirmStatusToggle = async (password: string) => {
       v-model:per-page="filters.per_page"
       @fetch="fetchUsers"
       @open-role-modal="openRoleModal"
+      @open-branch-modal="openBranchModal"
       @open-confirm-modal="openConfirmModal"
     />
 
@@ -187,6 +211,16 @@ const handleConfirmStatusToggle = async (password: string) => {
       v-model:selected-role-id="selectedRoleId"
       :is-assigning="isAssigning"
       @submit="handleAssignRole"
+    />
+
+    <!-- Branch Assignment Modal -->
+    <AssignBranchModal
+      v-model="showBranchModal"
+      :user="selectedUser"
+      :branches="branches"
+      v-model:selected-branch-id="selectedBranchId"
+      :is-assigning="isAssigningBranch"
+      @submit="handleAssignBranch"
     />
     <!-- Password Confirmation Modal for Status Toggle -->
     <ConfirmPasswordModal

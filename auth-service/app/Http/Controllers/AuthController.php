@@ -2,23 +2,25 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\CookieHelper;
+use App\Http\Requests\ResetPasswordRequest;
+use App\Models\User;
 use App\Services\AuthService;
 use App\Services\RolePermissionService;
 use App\Services\UserService;
 use Illuminate\Http\Request;
-use App\Http\Requests\ResetPasswordRequest;
-use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
-use App\Models\User;
-use App\Helpers\CookieHelper;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
     protected AuthService $authService;
+
     protected RolePermissionService $rolePermissionService;
+
     protected UserService $userService;
 
     public function __construct(
@@ -40,13 +42,29 @@ class AuthController extends Controller
 
         // Create the keypair
         $res = openssl_pkey_new($config);
-        
-        if (!$res) {
+
+        if (! $res) {
+            $candidates = array_filter([
+                getenv('OPENSSL_CONF'),
+                dirname(PHP_BINARY).DIRECTORY_SEPARATOR.'extras'.DIRECTORY_SEPARATOR.'ssl'.DIRECTORY_SEPARATOR.'openssl.cnf',
+                dirname(PHP_BINARY).DIRECTORY_SEPARATOR.'openssl.cnf',
+            ], fn ($path) => is_string($path) && file_exists($path));
+
+            foreach ($candidates as $candidate) {
+                $config['config'] = $candidate;
+                $res = openssl_pkey_new($config);
+                if ($res) {
+                    break;
+                }
+            }
+        }
+
+        if (! $res) {
             return response()->json(['message' => 'Failed to generate encryption key'], 500);
         }
 
         // Extract private key
-        openssl_pkey_export($res, $privateKey);
+        openssl_pkey_export($res, $privateKey, null, $config);
 
         // Extract public key
         $publicKey = openssl_pkey_get_details($res)['key'];
@@ -54,7 +72,7 @@ class AuthController extends Controller
         $keyId = (string) Str::uuid();
 
         // Store private key in cache for 5 minutes
-        \Illuminate\Support\Facades\Cache::put("rsa_key_{$keyId}", $privateKey, now()->addMinutes(5));
+        Cache::put("rsa_key_{$keyId}", $privateKey, now()->addMinutes(5));
 
         return response()->json([
             'public_key' => $publicKey,
@@ -66,9 +84,11 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
+
+        $user->loadMissing(['profile.role', 'profile.department', 'profile.branch']);
 
         return response()->json([
             'user' => $this->authService->formatUserForFrontend($user),
@@ -77,7 +97,7 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        \Illuminate\Support\Facades\Log::info('Login Attempt Data:', $request->all());
+        Log::info('Login Attempt Data:', $request->all());
 
         $request->merge([
             'email' => trim($request->input('email', '')),
@@ -132,7 +152,7 @@ class AuthController extends Controller
     {
         $refreshTokenPlain = $request->cookie('refresh_token') ?: $request->input('refresh_token');
 
-        if (!$refreshTokenPlain) {
+        if (! $refreshTokenPlain) {
             return response()->json(['message' => 'Refresh token missing.'], 401);
         }
 
@@ -147,7 +167,7 @@ class AuthController extends Controller
                 'token' => $result['access_token'],
                 'access_token' => $result['access_token'],
                 'refresh_token' => $result['refresh_token'],
-                'user' => $result['user']
+                'user' => $result['user'],
             ])->withCookie(
                 CookieHelper::makeAuthCookie('access_token', $result['access_token'], 60 * 24)
             )->withCookie(
@@ -163,7 +183,7 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         $refreshTokenPlain = $request->cookie('refresh_token');
-        $user = $request->user();
+        $user = $request->user('api') ?? $request->user();
         $sessionId = $request->cookie('session_id') ?: $request->header('X-Session-ID');
 
         $this->authService->logout(
@@ -189,7 +209,7 @@ class AuthController extends Controller
         ]);
 
         $request->validate([
-            'email' => 'required|string|email|max:255'
+            'email' => 'required|string|email|max:255',
         ]);
 
         $this->authService->sendPasswordReset($request->email, $request->ip());
@@ -202,6 +222,7 @@ class AuthController extends Controller
     {
         try {
             $this->authService->resetPassword($request->token, $request->password);
+
             return response()->json(['message' => 'Password has been successfully reset.']);
         } catch (ValidationException $e) {
             return response()->json(['message' => $e->getMessage()], 400);
@@ -211,17 +232,19 @@ class AuthController extends Controller
     public function sendVerification(Request $request)
     {
         $this->authService->sendVerificationEmail($request->user());
+
         return response()->json(['message' => 'Verification email sent.']);
     }
 
     public function verifyEmail(Request $request)
     {
         $request->validate([
-            'token' => 'required|string'
+            'token' => 'required|string',
         ]);
 
         try {
             $this->authService->verifyEmail($request->token);
+
             return response()->json(['message' => 'Email verified successfully.']);
         } catch (ValidationException $e) {
             return response()->json(['message' => $e->getMessage()], 400);
@@ -237,10 +260,9 @@ class AuthController extends Controller
         $permissions = $this->rolePermissionService->getUserPermissionsBySystem($request->user()->id, $system);
 
         return response()->json([
-            'permissions' => $permissions
+            'permissions' => $permissions,
         ]);
     }
-
 
     public function verifyPassword(Request $request)
     {
@@ -304,7 +326,7 @@ class AuthController extends Controller
             'last_name' => 'required|string|max:50',
             'middle_name' => 'nullable|string|max:50',
             'phone' => 'required|string|max:20',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'email' => 'required|string|email|max:255|unique:users,email,'.$user->id,
         ]);
 
         $updatedUser = $this->userService->updateProfile(
@@ -316,7 +338,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Profile details updated successfully.',
-            'user' => $updatedUser
+            'user' => $updatedUser,
         ]);
     }
 }

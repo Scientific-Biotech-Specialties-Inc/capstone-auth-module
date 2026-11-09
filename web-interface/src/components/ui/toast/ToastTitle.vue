@@ -16,7 +16,7 @@ const props = withDefaults(defineProps<Props>(), {
   <Primitive
     :as="as"
     :as-child="asChild"
-    :class="cn('flex-1 text-sm font-bold uppercase tracking-tight text-[#1E293B] font-sans leading-snug break-words', props.class)"
+    :class="cn('flex-1 text-sm font-medium text-[#1E293B] font-sans leading-snug break-words', props.class)"
   >
     <slot />
   </Primitive>

@@ -76,19 +76,24 @@ onUnmounted(() => {
 
 <template>
   <Teleport to="body">
-    <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div v-if="modelValue" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <!-- Full screen backdrop covering header and sidebar -->
       <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" @click="closeModal"></div>
       
       <div class="relative bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200 flex flex-col overflow-visible">
         <!-- Header -->
-        <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 flex-shrink-0 rounded-t-3xl">
-          <div>
-            <h2 class="text-xl font-bold text-slate-900 font-sans">Assign Role</h2>
-            <p class="text-xs text-slate-500 font-medium uppercase tracking-wider mt-0.5">Updating {{ user?.email }}</p>
+        <div class="p-6 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-indigo-50 text-[#252578] flex items-center justify-center flex-shrink-0">
+              <Shield :size="20" />
+            </div>
+            <div>
+              <h2 class="text-lg font-bold text-slate-900 font-sans">Assign Role</h2>
+              <p class="text-xs text-slate-500 mt-0.5 font-sans">Updating role for <span class="font-semibold text-slate-700">{{ user?.email }}</span></p>
+            </div>
           </div>
-          <button @click="closeModal" class="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-xl transition-all shadow-sm cursor-pointer">
-            <X :size="20" />
+          <button @click="closeModal" class="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-all cursor-pointer">
+            <X :size="18" />
           </button>
         </div>
 
@@ -96,7 +101,7 @@ onUnmounted(() => {
         <div class="p-6 space-y-6 overflow-visible">
           <!-- User Summary Card -->
           <div class="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-            <div class="w-12 h-12 rounded-xl bg-white flex items-center justify-center font-bold text-slate-700 shadow-sm border border-slate-200 flex-shrink-0">
+            <div class="w-12 h-12 rounded-full bg-[#252578] flex items-center justify-center font-bold text-white shadow-sm flex-shrink-0">
               {{ (user?.profile?.first_name || 'U').substring(0, 1).toUpperCase() }}{{ (user?.profile?.last_name || '').substring(0, 1).toUpperCase() }}
             </div>
             <div class="min-w-0">

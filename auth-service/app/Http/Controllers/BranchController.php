@@ -3,11 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\Branch;
+use App\Models\User;
+use App\Repositories\Contracts\AuditLogRepositoryInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 class BranchController extends Controller
 {
+    protected AuditLogRepositoryInterface $auditLogRepo;
+
+    public function __construct(AuditLogRepositoryInterface $auditLogRepo)
+    {
+        $this->auditLogRepo = $auditLogRepo;
+    }
     /**
      * Display a listing of branches with assigned users count.
      */
@@ -111,5 +121,82 @@ class BranchController extends Controller
         return response()->json([
             'message' => 'Branch deleted successfully.'
         ]);
+    }
+
+    /**
+     * Internal endpoint for downstream subsystems (like Ticketing System)
+     * to fetch branch options using the shared internal service secret.
+     */
+    public function internalBranches(Request $request): JsonResponse
+    {
+        $secret = (string) $request->header('X-Internal-Secret');
+        $expectedSecret = (string) env('INTERNAL_SERVICE_SECRET');
+
+        if ($secret === '' || $expectedSecret === '' || !hash_equals($expectedSecret, $secret)) {
+            return response()->json(['valid' => false, 'message' => 'Forbidden.'], 403);
+        }
+
+        $branches = Branch::select(['id', 'name', 'address'])->orderBy('name', 'asc')->get();
+
+        return response()->json([
+            'valid' => true,
+            'data' => $branches
+        ]);
+    }
+
+    /**
+     * Assign a branch to a user (or clear if branch_id is null).
+     */
+    public function assignBranch(Request $request, int $userId): JsonResponse
+    {
+        if (Gate::denies('manage-users') && Gate::denies('manage-departments')) {
+            abort(403, 'Unauthorized to assign branches to users.');
+        }
+
+        $validated = $request->validate([
+            'branch_id' => 'nullable|exists:branches,id',
+        ], [
+            'branch_id.exists' => 'The selected branch does not exist.',
+        ]);
+
+        $user = User::with('profile.branch')->findOrFail($userId);
+
+        if (!$user->profile) {
+            return response()->json(['message' => 'User profile does not exist.'], 422);
+        }
+
+        $oldBranchName = $user->profile->branch?->name ?? 'None';
+        $newBranchId = !empty($validated['branch_id']) ? (int) $validated['branch_id'] : null;
+        $newBranch = $newBranchId ? Branch::find($newBranchId) : null;
+        $newBranchName = $newBranch?->name ?? 'None';
+
+        try {
+            DB::beginTransaction();
+
+            $user->profile->update(['branch_id' => $newBranchId]);
+
+            $this->auditLogRepo->log(
+                $request->user()?->id,
+                'USER_BRANCH_CHANGED',
+                "Assigned branch {$newBranchName} to user {$user->email} (was {$oldBranchName})",
+                $request->ip(),
+                $request->userAgent()
+            );
+
+            DB::commit();
+
+            $user->load(['profile.role', 'profile.department', 'profile.branch']);
+
+            return response()->json([
+                'message' => 'Branch assigned successfully.',
+                'user' => $user
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to assign branch.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

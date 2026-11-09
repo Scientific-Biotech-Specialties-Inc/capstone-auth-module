@@ -103,6 +103,12 @@ class UserRepository implements UserRepositoryInterface
             $query->filterByDepartment($filters['department_id']);
         }
 
+        if (!empty($filters['branch_id'])) {
+            $query->whereHas('profile', function ($q) use ($filters) {
+                $q->where('branch_id', $filters['branch_id']);
+            });
+        }
+
         if (isset($filters['is_active']) && $filters['is_active'] !== '') {
             $query->filterByStatus($filters['is_active']);
         }

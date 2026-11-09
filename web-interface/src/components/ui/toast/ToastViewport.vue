@@ -13,11 +13,13 @@ const props = withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-  <Primitive
-    :as="as"
-    :as-child="asChild"
-    :class="cn('fixed bottom-8 right-8 z-[100] flex flex-col gap-3 pointer-events-none w-full max-w-sm sm:max-w-md px-4 sm:px-0 outline-none border-0', props.class)"
-  >
-    <slot />
-  </Primitive>
+  <Teleport to="body">
+    <Primitive
+      :as="as"
+      :as-child="asChild"
+      :class="cn('fixed bottom-8 right-8 z-[9999] flex flex-col gap-3 pointer-events-none w-full max-w-sm sm:max-w-md px-4 sm:px-0 outline-none border-0', props.class)"
+    >
+      <slot />
+    </Primitive>
+  </Teleport>
 </template>

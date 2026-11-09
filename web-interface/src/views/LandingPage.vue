@@ -5,7 +5,7 @@
       <div class="lp-nav-inner">
         <!-- Left: Corporate Logo -->
         <a href="#hero" class="lp-nav-logo" @click.prevent="scrollToSection('hero')" aria-label="SBSI Home">
-          <img src="/images/SBSI-logo.png" alt="Scientific Biotech Specialties, Inc." class="lp-logo-img" />
+          <img src="/images/sbsi-logo-variation1-white.webp" alt="Scientific Biotech Specialties, Inc." class="lp-logo-img" />
         </a>
 
         <!-- Right: Links (Home, Systems, Features) + Login Button -->
@@ -330,7 +330,7 @@
           <!-- Column 1: Corporate Identity & Brand Mark -->
           <div class="lp-footer-brand-col">
             <a href="#hero" class="lp-footer-logo-link" @click.prevent="scrollToSection('hero')" aria-label="SBSI Home">
-              <img src="/images/SBSI-logo.png" alt="Scientific Biotech Specialties, Inc." class="lp-footer-logo" />
+              <img src="/images/sbsi-logo-variation1-white.webp" alt="Scientific Biotech Specialties, Inc." class="lp-footer-logo" />
             </a>
             <div class="lp-footer-badge">
               <span class="lp-footer-badge-dot"></span>
@@ -845,7 +845,7 @@ onUnmounted(() => {
 }
 
 .lp-logo-img {
-  height: 42px;
+  height: 26px;
   object-fit: contain;
   transition: transform 0.2s ease;
 }
@@ -942,7 +942,7 @@ onUnmounted(() => {
   inset: 0;
   width: 100%;
   height: 100%;
-  background-image: url('/images/SBSI-bg.png');
+  background-image: url('/images/SBSI-bg.webp');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -1707,7 +1707,7 @@ onUnmounted(() => {
 }
 
 .lp-footer-logo {
-  height: 56px;
+  height: 32px;
   object-fit: contain;
   transition: opacity 0.2s ease;
 }

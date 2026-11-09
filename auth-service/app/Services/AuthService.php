@@ -198,6 +198,11 @@ class AuthService
                 'department' => $user->profile->department ? [
                     'name' => $user->profile->department->name,
                 ] : null,
+                'branch' => $user->profile->branch ? [
+                    'id' => $user->profile->branch->id,
+                    'name' => $user->profile->branch->name,
+                    'address' => $user->profile->branch->address,
+                ] : null,
             ] : null,
         ];
     }

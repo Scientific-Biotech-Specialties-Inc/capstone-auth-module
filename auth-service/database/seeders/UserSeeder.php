@@ -53,7 +53,7 @@ class UserSeeder extends Seeder
             ['Carlo', null, 'Mendoza', 'sales.employee3@sbsi.com', 'Sales & Marketing', 'Employee'],
             ['Lara', null, 'Aquino', 'sales.employee4@sbsi.com', 'Sales & Marketing', 'Employee'],
             ['Nico', null, 'Ramos', 'sales.employee5@sbsi.com', 'Sales & Marketing', 'Employee'],
-            ['Hannah', null, 'Flores', 'employee.accounting@sbsi.com', 'Accounting', 'Accountant'],
+            ['Hannah', null, 'Flores', 'employee.accounting@sbsi.com', 'Accounting', 'Employee'],
             ['Victor', null, 'Ocampo', 'employee.admin@sbsi.com', 'Admin', 'Employee'],
             ['Sofia', null, 'Bautista', 'employee.executive@sbsi.com', 'Executive', 'Employee'],
             ['Gabriel', null, 'Pascual', 'employee.finance@sbsi.com', 'Finance', 'Employee'],
@@ -79,7 +79,7 @@ class UserSeeder extends Seeder
             UserCredential::updateOrCreate(
                 ['user_id' => $user->id],
                 [
-                    'password_hash' => Hash::make('password', ['rounds' => 12]),
+                    'password_hash' => Hash::make('password', ['rounds' => config('hashing.bcrypt.rounds', 12)]),
                     'must_change_password' => false,
                     'password_changed_at' => now(),
                 ]

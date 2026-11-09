@@ -41,8 +41,8 @@ All frontend engineering and user interface work must strictly follow the rules 
    - Surface Pure White: `#FFFFFF` (Cards, modals, dropdowns, inputs, top header)
    - Dark Slate: `#1E293B` (Metric numbers, modal titles, body typography)
    - Muted Slate: `#8D8B8F` (Subtitles, table cells, helper copy)
-   - Avatar Circle: `#A7A7C8` | Eyebrow/Tracker: `#8086A3` | Table Headers: `#94A3B8`
-3. **Strict 8px Spacing Grid**: All margins and paddings must use 8px increments (`8px`, `16px`, `24px`, `32px`, `48px`). 4px is reserved exclusively for micro-badges. Arbitrary values (`p-[13px]`, `m-[7px]`) are strictly prohibited.
+   - Avatar Circle Fill: `#252578` (Navy) with `#A7A7C8` Header Border Ring | Eyebrow/Tracker: `#8086A3` | Table Headers: `#94A3B8`
+3. **Strict 8px Spacing Grid**: All margins and paddings must use 8px increments (`8px`, `16px`, `24px`, `32px`, `48px`). 4px is reserved exclusively for micro-badges. Arbitrary values (`p-[13px]`, `m-[7px]`) are strictly prohibited. The top navigation header is standardized at exactly **`72px`** (`h-[72px]` / `h-18`, 9 × 8px) across all group subsystems (**CRMS**, **SERMS**, **PRS**, **TS**), aligning directly with the 72px sidebar brand lockup.
 4. **Component Primitive Architecture**:
    - Base UI components must exclusively use **shadcn-vue** (Radix Vue headless primitives styled with Tailwind CSS).
    - Icons must exclusively be sourced from **Lucide Icons** (`lucide-vue-next`).
@@ -53,15 +53,49 @@ All frontend engineering and user interface work must strictly follow the rules 
 7. **Badge Semantics**: Status badges must use **Title Case** (`Active`, `Pending`, `Approved`, `Rejected`), never all-caps. Maintain a single visual tier (bordered or low-emphasis) per table column.
 8. **Figma MCP Integration**: AI agents must utilize the local Figma MCP server (`figma-dev-mode-mcp-server`) with canonical project [PRS Figma Component Library](https://www.figma.com/design/ciWpnQzNBU3Zopv97v29nN/PRS?node-id=79-1078&t=vMI8xDhUbfkm564o-1) to inspect nodes, verify measurements, check variants, and extract exact assets whenever designing UI.
 
-### Proper Subagent Delegation for UI Tasks
+### Proper Subagent Delegation for UI and Testing Tasks
 
-When coordinating UI development, AI orchestrators must route tasks to the appropriate specialized subagents:
+When coordinating UI and testing development, AI orchestrators must route tasks to the appropriate specialized subagents:
 
 - **`@ui-designer`**: Visual design specifications, color/typography token audits, Figma MCP node inspections, interaction state definitions (hover, active, disabled), and accessibility checks.
 - **`@frontend-developer`**: Vue 3 SPA implementation (`web-interface/src/`), TypeScript typing, shadcn-vue integration, Tailwind 3.4 styling, router navigation, and reactive state management adhering to `DESIGN.md`.
 - **`@architect-reviewer`**: Gateway route integration, API contract consistency, cross-subsystem auth token validation, and SPA architectural reviews.
-- **`@code-reviewer`**: Pre-commit / pre-PR compliance audits checking that UI changes strictly adhere to `DESIGN.md` guardrails (no arbitrary styles, correct loading patterns, strict tokens).
-- **`@qa-expert`**: Form validation testing, confirmation modal workflow checks, toast auto-dismiss verification, and responsive viewport audits.
+- **`@code-reviewer`**: Pre-commit / pre-PR compliance audits checking that UI changes strictly adhere to `DESIGN.md` guardrails (no arbitrary styles, correct loading patterns, strict tokens) and that testing standards are met.
+- **`@qa-expert` / `@test-engineer`**: Form validation testing, confirmation modal workflow checks, toast auto-dismiss verification, unit & integration test creation across both `auth-service` and `web-interface`, E2E test scenarios in Playwright, and edge-case fuzzing.
+
+---
+
+## 🧪 Mandatory Testing & Quality Assurance Standards
+
+To guarantee enterprise-grade stability and prevent regressions across the 4 downstream subsystems (**CRMS**, **SERMS**, **PRS**, **TS**), **all AI agents and contributors must strictly enforce a Zero Untested Code policy**. Every pull request must introduce and maintain comprehensive test suites across all layers of the stack.
+
+### 1. Test Suite Hierarchy & Conventions
+
+| Test Level | Scope & Purpose | Location | Framework / Tool |
+| :--- | :--- | :--- | :--- |
+| **Backend Unit Tests** | Isolated business logic, crypto helpers, validation rules, service classes without DB | `auth-service/tests/Unit/` | PHPUnit 12.5 (`php artisan test --testsuite=Unit`) |
+| **Backend Feature / Integration Tests** | Full HTTP API endpoints, database transactions, OAuth2 token grant flows, RBAC enforcement | `auth-service/tests/Feature/` | PHPUnit 12.5 with SQLite in-memory (`php artisan test --testsuite=Feature`) |
+| **Frontend Unit & Component Tests** | Composables, utility functions (`authState`, `role`, `redirectValidation`), isolated UI component renders and emits | `web-interface/src/**/__tests__/*.spec.ts` | Vitest + `@vue/test-utils` + `happy-dom` (`npm run test:unit`) |
+| **Frontend End-to-End (E2E) Tests** | Full user journeys in real browser engine: login, session invalidation, password reset, protected route guard redirects | `web-interface/e2e/*.spec.ts` | Playwright (`npm run test:e2e`) |
+
+### 2. Mandatory Directives for AI Agents
+
+1. **Zero Untested Code Policy**: AI agents MUST NOT submit or propose code changes without accompanying unit, integration, or E2E tests.
+   - If adding or modifying a backend endpoint, service, or rule: create/update tests in `auth-service/tests/Feature/` or `auth-service/tests/Unit/`.
+   - If adding or modifying a frontend utility, composable, or component: create/update tests in `web-interface/src/**/__tests__/`.
+   - If adding or modifying an authentication, navigation, or authorization flow: add corresponding scenarios in `web-interface/e2e/`.
+2. **Mandatory Pre-PR Verification Checklist**:
+   Before proposing any PR, AI agents must run and verify that all of the following commands pass locally:
+   - **Backend**:
+     - `php artisan test` (all unit and feature test assertions pass)
+     - `./vendor/bin/pint --test --dirty` (PSR-12 code style compliance on changed files)
+   - **Frontend**:
+     - `npm run test:unit` (Vitest unit and component tests pass)
+     - `npm run build` (`vue-tsc -b && vite build` — strict TypeScript typecheck and production bundling)
+     - `npm run test:e2e` (Playwright browser smoke and flow tests pass)
+3. **CI/CD Failure Remediation**:
+   - Every PR triggers `.github/workflows/pr-checks.yml` running parallel backend tests, frontend unit tests, typecheck/build, and Playwright E2E suites.
+   - If any CI job fails, the PR cannot be merged. The agent must inspect the failure summary, replicate the issue locally, and resolve it immediately.
 
 ---
 

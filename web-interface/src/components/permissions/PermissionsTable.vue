@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { 
-  Loader2, 
   Key, 
   Shield, 
   Users, 
@@ -34,8 +33,27 @@ const internalPerPage = computed({
 })
 
 const activeDropdownPermId = ref<number | null>(null)
-const toggleDropdown = (id: number) => {
-  activeDropdownPermId.value = activeDropdownPermId.value === id ? null : id
+const openUpward = ref(false)
+
+const toggleDropdown = (id: number, index: number, event?: MouseEvent) => {
+  if (activeDropdownPermId.value === id) {
+    activeDropdownPermId.value = null
+    return
+  }
+
+  const total = props.permissions.length
+  let shouldOpenUp = total > 1 && (total <= 3 ? index === total - 1 : index >= total - 2)
+
+  if (event && event.currentTarget) {
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    if (spaceBelow < 190) {
+      shouldOpenUp = true
+    }
+  }
+
+  openUpward.value = shouldOpenUp
+  activeDropdownPermId.value = id
 }
 
 const handleClickOutside = (e: MouseEvent) => {
@@ -56,12 +74,8 @@ onUnmounted(() => {
 
 <template>
   <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-    <div v-if="loading" class="p-12 flex flex-col items-center justify-center gap-4 text-slate-500">
-      <Loader2 class="animate-spin" :size="32" />
-      <p class="font-medium">Loading permissions...</p>
-    </div>
-
-    <div v-else-if="permissions.length === 0" class="p-12 text-center">
+    <!-- Empty State (only when not loading and no results) -->
+    <div v-if="!loading && permissions.length === 0" class="p-12 text-center">
       <div class="w-16 h-16 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
         <Key :size="32" />
       </div>
@@ -69,7 +83,8 @@ onUnmounted(() => {
       <p class="text-slate-500 mt-1">Get started by creating your first system permission.</p>
     </div>
 
-    <div v-else class="overflow-x-auto">
+    <!-- Table (always visible; skeleton replaces tbody rows when loading) -->
+    <div v-else class="overflow-x-auto min-h-[220px]">
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="bg-slate-50/50 border-b border-slate-100">
@@ -80,11 +95,37 @@ onUnmounted(() => {
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-50">
-          <tr 
-            v-for="permission in permissions" 
-            :key="permission.id"
-            class="hover:bg-slate-50/50 transition-colors group"
-          >
+          <!-- ── Skeleton Loader Rows (DESIGN.md §VIII: skeleton for data tables) ── -->
+          <template v-if="loading">
+            <tr v-for="i in perPage" :key="`skel-${i}`" class="animate-pulse">
+              <!-- Permission cell -->
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-slate-200 flex-shrink-0"></div>
+                  <div class="h-3 w-32 bg-slate-200 rounded"></div>
+                </div>
+              </td>
+              <!-- Slug cell -->
+              <td class="px-6 py-4">
+                <div class="h-5 w-36 bg-slate-200 rounded"></div>
+              </td>
+              <!-- Description cell -->
+              <td class="px-6 py-4">
+                <div class="h-3 w-48 bg-slate-200 rounded"></div>
+              </td>
+              <!-- Actions cell -->
+              <td class="px-6 py-4">
+                <div class="h-6 w-6 bg-slate-200 rounded-lg ml-auto"></div>
+              </td>
+            </tr>
+          </template>
+          <!-- Real Data Rows -->
+          <template v-else>
+            <tr
+              v-for="(permission, index) in permissions"
+              :key="permission.id"
+              class="hover:bg-slate-50/50 transition-colors group"
+            >
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-8 h-8 bg-slate-100 text-slate-600 rounded-lg flex items-center justify-center group-hover:bg-[#252578] group-hover:text-white transition-colors">
@@ -99,23 +140,24 @@ onUnmounted(() => {
             <td class="px-6 py-4">
               <p class="text-sm text-slate-500 line-clamp-1 max-w-xs">{{ permission.description || 'No description' }}</p>
             </td>
-            <td class="px-6 py-4 text-right relative">
-              <div class="flex justify-end items-center relative">
+            <td class="px-6 py-4 text-right" :class="{ 'relative z-40': activeDropdownPermId === permission.id }">
+              <div class="flex justify-end items-center relative" :class="{ 'z-40': activeDropdownPermId === permission.id }">
                 <!-- 3-Dots Action Button -->
-                <button 
-                  @click.stop="toggleDropdown(permission.id)"
+                <button
+                  @click.stop="toggleDropdown(permission.id, index, $event)"
                   class="dropdown-trigger p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-all cursor-pointer"
                   title="Actions"
                 >
                   <MoreVertical :size="18" />
                 </button>
 
-                <!-- Dropdown Menu -->
-                <div 
+                <!-- Dropdown Menu (Smart Auto-Flip Up/Down) -->
+                <div
                   v-if="activeDropdownPermId === permission.id"
-                  class="dropdown-menu absolute right-0 top-full mt-1 z-30 bg-white border border-slate-200 rounded-xl shadow-lg p-1.5 flex flex-col gap-1 min-w-[170px] text-left animate-in fade-in slide-in-from-top-1 duration-150"
+                  class="dropdown-menu absolute right-0 z-40 bg-white border border-slate-200 rounded-xl shadow-lg p-1.5 flex flex-col gap-1 min-w-[170px] text-left animate-in fade-in duration-150"
+                  :class="openUpward ? 'bottom-full mb-1 slide-in-from-bottom-1' : 'top-full mt-1 slide-in-from-top-1'"
                 >
-                  <button 
+                  <button
                     @click.stop="activeDropdownPermId = null; emit('open-assign-modal', permission)"
                     class="w-full px-3 py-2 hover:bg-blue-50 text-slate-700 hover:text-[#252578] rounded-lg transition-all flex items-center gap-2.5 text-xs font-semibold cursor-pointer"
                   >
@@ -123,7 +165,7 @@ onUnmounted(() => {
                     <span>Assign to Roles</span>
                   </button>
 
-                  <button 
+                  <button
                     @click.stop="activeDropdownPermId = null; emit('open-edit-modal', permission)"
                     class="w-full px-3 py-2 hover:bg-slate-50 text-slate-700 hover:text-slate-900 rounded-lg transition-all flex items-center gap-2.5 text-xs font-semibold cursor-pointer"
                   >
@@ -133,7 +175,7 @@ onUnmounted(() => {
 
                   <div class="h-px bg-slate-100 my-0.5"></div>
 
-                  <button 
+                  <button
                     @click.stop="activeDropdownPermId = null; emit('delete', permission.id)"
                     class="w-full px-3 py-2 hover:bg-red-50 text-red-600 rounded-lg transition-all flex items-center gap-2.5 text-xs font-semibold cursor-pointer"
                   >
@@ -144,6 +186,7 @@ onUnmounted(() => {
               </div>
             </td>
           </tr>
+          </template>
         </tbody>
       </table>
     </div>

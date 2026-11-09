@@ -2,7 +2,11 @@ export function hasAuthStatusCookie(): boolean {
   return document.cookie
     .split(';')
     .map((cookie) => cookie.trim())
-    .some((cookie) => cookie.startsWith('is_authenticated='))
+    .some((cookie) => {
+      if (!cookie.startsWith('is_authenticated=')) return false
+      const val = cookie.substring('is_authenticated='.length).trim()
+      return val.length > 0 && val !== 'false' && val !== '0'
+    })
 }
 
 export function hasLocalUser(): boolean {

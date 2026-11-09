@@ -1,8 +1,19 @@
 <?php
 
+use App\Http\Controllers\AdminAuditLogController;
+use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BranchController;
 use App\Http\Controllers\BrevoWebhookController;
-use Illuminate\Http\Request;
+use App\Http\Controllers\DelegationController;
+use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\InternalAuditLogController;
+use App\Http\Controllers\InternalRoleController;
+use App\Http\Controllers\InternalUserController;
+use App\Http\Controllers\InternalVerifyTokenController;
+use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\RoleController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/encryption-key', [AuthController::class, 'getEncryptionKey']);
@@ -26,77 +37,76 @@ Route::middleware(['auth:api'])->group(function () {
 Route::get('/verify-email', [AuthController::class, 'verifyEmail']);
 Route::post('/me/password', [AuthController::class, 'changePassword'])->middleware(['password.change.session', 'active.session', 'decrypt.rsa:current_password,new_password,new_password_confirmation']);
 
-Route::get('/internal/audit-logs', [\App\Http\Controllers\InternalAuditLogController::class, 'index']);
-Route::post('/internal/verify-token', \App\Http\Controllers\InternalVerifyTokenController::class);
-Route::get('/internal/users/{id}', [\App\Http\Controllers\InternalUserController::class, 'show']);
-Route::get('/internal/users-by-roles', [\App\Http\Controllers\InternalUserController::class, 'getUsersByRoles']);
-Route::get('/internal/users-batch', [\App\Http\Controllers\InternalUserController::class, 'getUsersBatch']);
-Route::get('/internal/roles/{id}/active-holders', [\App\Http\Controllers\InternalRoleController::class, 'activeHolders']);
-Route::get('/internal/roles/{id}/describe', [\App\Http\Controllers\InternalRoleController::class, 'describe']);
+Route::get('/internal/audit-logs', [InternalAuditLogController::class, 'index']);
+Route::post('/internal/verify-token', InternalVerifyTokenController::class);
+Route::get('/internal/users/{id}', [InternalUserController::class, 'show']);
+Route::get('/internal/users-by-roles', [InternalUserController::class, 'getUsersByRoles']);
+Route::get('/internal/users-batch', [InternalUserController::class, 'getUsersBatch']);
+Route::get('/internal/roles/{id}/active-holders', [InternalRoleController::class, 'activeHolders']);
+Route::get('/internal/roles/{id}/describe', [InternalRoleController::class, 'describe']);
+Route::get('/internal/branches', [BranchController::class, 'internalBranches']);
 
 Route::middleware(['auth:api', 'active.session'])->group(function () {
     // Routes that must be accessible even if password change is required
-    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/user', [AuthController::class, 'me']);
 
     // Routes that require password change
     Route::middleware('require.password.change')->group(function () {
         Route::post('/send-verification', [AuthController::class, 'sendVerification']);
         Route::post('/verify-password', [AuthController::class, 'verifyPassword']);
-        Route::get('/user', function (Request $request) {
-            return $request->user();
-        });
         Route::get('/me/permissions', [AuthController::class, 'permissions']);
         Route::put('/me/profile', [AuthController::class, 'updateProfile']);
 
         // "My Delegations" — any user holding a role they can delegate
         // manages their own delegations here (see RolePermissionService
         // Phase 1 decisions: delegators act only on their own behalf).
-        Route::get('/me/delegations', [App\Http\Controllers\DelegationController::class, 'myDelegations']);
-        Route::post('/me/delegations', [App\Http\Controllers\DelegationController::class, 'store']);
-        Route::delete('/me/delegations/{id}', [App\Http\Controllers\DelegationController::class, 'revoke']);
+        Route::get('/me/delegations', [DelegationController::class, 'myDelegations']);
+        Route::post('/me/delegations', [DelegationController::class, 'store']);
+        Route::delete('/me/delegations/{id}', [DelegationController::class, 'revoke']);
     });
 });
 
 Route::middleware(['auth:api', 'active.session', 'require.password.change', 'can:manage-users'])->prefix('admin')->group(function () {
-    Route::get('/dashboard-stats', [App\Http\Controllers\AdminDashboardController::class, 'stats']);
-    Route::get('/audit-logs', [App\Http\Controllers\AdminAuditLogController::class, 'index']);
-    Route::get('/users', [App\Http\Controllers\AdminUserController::class, 'index']);
-    Route::post('/users', [App\Http\Controllers\AdminUserController::class, 'store']);
-    Route::get('/users/{id}', [App\Http\Controllers\AdminUserController::class, 'show']);
-    Route::patch('/users/{id}/status', [App\Http\Controllers\AdminUserController::class, 'toggleStatus']);
-    Route::get('/department-options', [App\Http\Controllers\AdminUserController::class, 'getDepartments']);
-    Route::get('/role-options', [App\Http\Controllers\AdminUserController::class, 'getRoles']);
-    Route::get('/branch-options', [App\Http\Controllers\BranchController::class, 'options']);
+    Route::get('/dashboard-stats', [AdminDashboardController::class, 'stats']);
+    Route::get('/audit-logs', [AdminAuditLogController::class, 'index']);
+    Route::get('/users', [AdminUserController::class, 'index']);
+    Route::post('/users', [AdminUserController::class, 'store']);
+    Route::get('/users/{id}', [AdminUserController::class, 'show']);
+    Route::patch('/users/{id}/status', [AdminUserController::class, 'toggleStatus']);
+    Route::patch('/users/{id}/branch', [BranchController::class, 'assignBranch']);
+    Route::get('/department-options', [AdminUserController::class, 'getDepartments']);
+    Route::get('/role-options', [AdminUserController::class, 'getRoles']);
+    Route::get('/branch-options', [BranchController::class, 'options']);
 });
 
 Route::middleware(['auth:api', 'active.session', 'require.password.change', 'can:manage-roles'])->prefix('admin')->group(function () {
     // Static segment BEFORE apiResource: otherwise 'access-systems' would
     // be captured as roles/{role}.
-    Route::get('roles/access-systems', [App\Http\Controllers\RoleController::class, 'accessSystems']);
-    Route::apiResource('roles', App\Http\Controllers\RoleController::class);
-    Route::get('roles/{id}/users', [App\Http\Controllers\RoleController::class, 'users']);
-    Route::patch('users/{id}/role', [App\Http\Controllers\RoleController::class, 'assignRole']);
-    
+    Route::get('roles/access-systems', [RoleController::class, 'accessSystems']);
+    Route::apiResource('roles', RoleController::class);
+    Route::get('roles/{id}/users', [RoleController::class, 'users']);
+    Route::patch('users/{id}/role', [RoleController::class, 'assignRole']);
+
     // Permission Management
-    Route::apiResource('permissions', App\Http\Controllers\PermissionController::class);
-    Route::get('permissions/{id}/roles', [App\Http\Controllers\PermissionController::class, 'getRoles']);
-    Route::post('permissions/{id}/roles', [App\Http\Controllers\PermissionController::class, 'syncRoles']);
-    Route::get('roles/{id}/permissions', [App\Http\Controllers\RoleController::class, 'permissions']);
-    Route::post('roles/{id}/permissions', [App\Http\Controllers\RoleController::class, 'syncPermissions']);
+    Route::apiResource('permissions', PermissionController::class);
+    Route::get('permissions/{id}/roles', [PermissionController::class, 'getRoles']);
+    Route::post('permissions/{id}/roles', [PermissionController::class, 'syncRoles']);
+    Route::get('roles/{id}/permissions', [RoleController::class, 'permissions']);
+    Route::post('roles/{id}/permissions', [RoleController::class, 'syncPermissions']);
 
     // Delegation oversight — IT/System admins can view all delegations and
     // revoke any of them, but do not create delegations on others' behalf.
-    Route::get('delegations', [App\Http\Controllers\DelegationController::class, 'index']);
-    Route::delete('delegations/{id}', [App\Http\Controllers\DelegationController::class, 'adminRevoke']);
+    Route::get('delegations', [DelegationController::class, 'index']);
+    Route::delete('delegations/{id}', [DelegationController::class, 'adminRevoke']);
 });
 
 Route::middleware(['auth:api', 'active.session', 'require.password.change', 'can:manage-departments'])->prefix('admin')->group(function () {
-    Route::apiResource('departments', App\Http\Controllers\DepartmentController::class);
-    Route::get('departments/{id}/users', [App\Http\Controllers\DepartmentController::class, 'users']);
-    Route::patch('users/{id}/department', [App\Http\Controllers\DepartmentController::class, 'assignDepartment']);
-    Route::apiResource('branches', App\Http\Controllers\BranchController::class);
+    Route::apiResource('departments', DepartmentController::class);
+    Route::get('departments/{id}/users', [DepartmentController::class, 'users']);
+    Route::patch('users/{id}/department', [DepartmentController::class, 'assignDepartment']);
+    Route::apiResource('branches', BranchController::class);
 });
 
 Route::middleware(['auth:api', 'active.session', 'require.password.change'])->group(function () {
-    Route::get('users/{id}/permissions', [App\Http\Controllers\AdminUserController::class, 'getUserPermissions']);
+    Route::get('users/{id}/permissions', [AdminUserController::class, 'getUserPermissions']);
 });

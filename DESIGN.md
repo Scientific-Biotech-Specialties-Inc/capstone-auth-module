@@ -117,7 +117,8 @@ Every color used across templates, components, and stylesheets must strictly ali
 | | Border | `#6EE7B7` | `border-emerald-300` |
 
 ### Specialized Contextual Colors
-- **Header Avatar Circle:** `#A7A7C8` (Circular badge with white bold initials).
+- **Avatar Circle Fill:** `#252578` (Brand Primary Navy — standardized solid background for circular avatar badges across the system, displaying white bold initials).
+- **Header Avatar Accent Ring/Border:** `#A7A7C8` (Light lavender/slate border ring enclosing the circular avatar badge specifically in the top header).
 - **Portal Eyebrows & Subtitles:** `#8086A3` (Category labels, portal tracker, subtitle scope text).
 - **Table Column Headers:** `#94A3B8` (Uppercase labels with expanded letter tracking).
 - **Primary Button Hover:** `#2F2F8E` (`10%` lighter translucent shift).
@@ -178,6 +179,7 @@ The layout strictly adheres to an **8px grid system**. Arbitrary margins and pad
 - **Z-Index:** Fixed viewport height, `z-30`.
 
 #### Header & Brand Lockup
+- **Standard Height:** Exactly **`72px`** (`h-[72px]` or `h-18`, 9 × 8px grid), perfectly matching the top header height for a seamless horizontal boundary across the viewport.
 - **System Logo (`sbsi-logo-white.png`)**: Positioned at top.
 - **Subsystem Name:** Poppins Bold for system name, Poppins Regular for "System" / "Management System", 1 font size smaller, 0 letter spacing, 1 line spacing, bottom line.
 - **Divider:** Subtle 1px border line directly below brand header (`border-b border-white/10`).
@@ -212,6 +214,7 @@ The layout strictly adheres to an **8px grid system**. Arbitrary margins and pad
 
 ### 2. Top Header Component
 
+- **Standard Height:** Exactly **`72px`** (`h-[72px]` or `h-18`, 9 × 8px grid increment) across all subsystems (**CRMS**, **SERMS**, **PRS**, **TS**, and Auth Module). This aligns precisely with the sidebar brand lockup baseline (`72px`) and guarantees optimal vertical clearance for user cards, avatars, and control triggers. Standalone portal navigation (e.g. Operations Hub navbar) standardizes on **`80px`** (`h-20`, 10 × 8px grid increment).
 - **Surface:** Solid pure white (`#FFFFFF`) with drop shadow (`shadow-sm`) or backdrop blur (`bg-white/90 backdrop-blur-md`).
 - **Layout:** Full-width flex container aligning navigation controls to the left and user utilities to the right.
 
@@ -224,7 +227,7 @@ The layout strictly adheres to an **8px grid system**. Arbitrary margins and pad
 - **Notification Button:** Bell icon button with solid blue circular unread badge (`#2E85D8`, `rounded-full`) displaying white bold unread count.
 - **Vertical Divider:** Subtle 1px separator (`h-6 w-px bg-slate-200`).
 - **User Profile Card (Dropdown Trigger):**
-  - **Circular Avatar Badge:** Solid background `#A7A7C8`, white bold user initials.
+  - **Circular Avatar Badge:** Solid Brand Primary Navy background (`#252578`) with light lavender accent border ring (`#A7A7C8`, e.g., `border-2 border-[#A7A7C8]`), white bold user initials.
   - **User Display Name:** Poppins SemiBold, Dark Slate (`#1E293B`).
   - **User Role:** Poppins Regular (400), Dark Slate (`#1E293B`) or Muted Slate (e.g., `Supervisor`, `Manager`, `System Admin`).
   - **Interaction State:** Entire user card acts as single interactive trigger (`cursor-pointer`). On hover: `hover:bg-slate-100/80`, `rounded-xl`.
@@ -547,23 +550,22 @@ Before completing any frontend or UI task, the responsible subagent must execute
 The ONE UI Toast Notification system provides real-time, non-blocking asynchronous feedback across the enterprise ecosystem (**CRMS**, **SERMS**, **PRS**, **TS**, and **Auth Module**).
 
 ### A. Placement & Stacking
-- **Screen Position:** Bottom-Right (`bottom: 32px; right: 32px; z-index: 100;`), avoiding collisions with header actions, top navigation bars, and user profile menus.
+- **Screen Position:** Bottom-Right (`bottom: 32px; right: 32px; z-index: 9999;`), floating above all page elements, modals, and backdrop overlays.
 - **Queue Limits:** Maximum of 3 simultaneous toast cards. Older notifications are automatically dismissed when capacity is exceeded.
 - **De-duplication:** Duplicate messages of the same variant reset their display timer rather than spawning duplicate cards.
 
 ### B. Visual Geometry & Token Adherence
-- **Container Geometry:** Pure White surface (`#FFFFFF`), `rounded-2xl` (16px), elevation shadow (`shadow-[0_10px_35px_rgba(0,0,0,0.12)]`), border (`border border-slate-100`).
-- **Accent Indicator Bar:** `w-1.5 rounded-l-2xl` along the left edge.
-- **Circular Icon Badge:** `w-12 h-12 rounded-full` with Lucide icons (`size: 24-26`, stroke width `2.5`).
-- **Typography:** Sentence-case string in code rendered in uppercase (`uppercase font-bold text-sm tracking-tight text-[#1E293B] font-sans`).
+- **Container Geometry:** Pure White surface (`#FFFFFF`), `rounded-2xl` (16px), subtle border (`border border-slate-200/80`), elevation shadow (`shadow-[0_10px_30px_rgba(0,0,0,0.10)]`). Clean, symmetrical card without artificial left colored bars.
+- **Circular Icon Badge:** `w-10 h-10 rounded-full` with Lucide icons (`size: 20-22`).
+- **Typography:** Natural sentence-case string rendered in medium weight (`font-medium text-sm text-[#1E293B] font-sans`).
 - **Dismiss Button:** Lucide `X` (`size: 18`), `rounded-xl`, hover background (`hover:bg-slate-100`).
 
 ### C. Variant Color Mapping
-| Variant | Left Accent Bar | Icon Circle Background | Icon Glyph | Glyph Color | Default Duration |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Success** | `bg-emerald-500` | `bg-emerald-50` | `CircleCheck` | `text-emerald-500` | 4000ms |
-| **Error** | `bg-red-500` | `bg-red-50` | `X` | `text-red-500` | 6000ms |
-| **Info** | `bg-[#2E85D8]` | `bg-blue-50` | `Info` | `text-[#2E85D8]` | 4000ms |
+| Variant | Icon Circle Background | Icon Glyph | Glyph Color | Default Duration |
+| :--- | :--- | :--- | :--- | :--- |
+| **Success** | `bg-emerald-50` | `CircleCheck` | `text-emerald-600` | 4000ms |
+| **Error** | `bg-red-50` | `X` | `text-red-500` | 6000ms |
+| **Info** | `bg-blue-50` | `Info` | `text-[#2E85D8]` | 4000ms |
 
 ### D. Interaction & Accessibility
 - **Hover Behavior:** Hovering over any notification card immediately pauses its dismissal timer; mouse leave resumes countdown from remaining time.

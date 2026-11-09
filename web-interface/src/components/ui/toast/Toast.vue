@@ -5,7 +5,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const toastVariants = cva(
-  'toast-item pointer-events-auto relative flex items-center gap-4 bg-white rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.12)] p-4 pr-3 min-h-[72px] overflow-hidden transition-all cursor-default select-none border-0 outline-none',
+  'toast-item pointer-events-auto relative flex items-center gap-3.5 bg-white rounded-2xl p-3.5 pr-2.5 min-h-[58px] overflow-hidden transition-all cursor-default select-none border-0 outline-none',
   {
     variants: {
       variant: {

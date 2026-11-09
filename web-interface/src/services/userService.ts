@@ -39,6 +39,10 @@ export const userService = {
     return api.patch(`/api/admin/users/${userId}/role`, { role_id: roleId })
   },
 
+  assignBranch(userId: number, branchId: number | string | null) {
+    return api.patch(`/api/admin/users/${userId}/branch`, { branch_id: branchId || null })
+  },
+
   toggleUserStatus(userId: number, password: string) {
     return api.patch(`/api/admin/users/${userId}/status`, { password })
   },

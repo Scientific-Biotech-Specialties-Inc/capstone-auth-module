@@ -64,7 +64,7 @@ if [ "${SKIP_MIGRATIONS}" != "true" ]; then
   CLIENT_COUNT=$(php artisan tinker --execute="echo Laravel\Passport\Client::whereJsonContains('grant_types', 'personal_access')->count();" 2>/dev/null | tail -1)
   if [ "${CLIENT_COUNT}" = "0" ] || [ -z "${CLIENT_COUNT}" ]; then
     echo "Creating Passport Personal Access Client..."
-    php artisan passport:client --personal --no-interaction || true
+    php artisan passport:client --personal --name="Central Auth Personal Access Client" --provider=users --no-interaction || true
   fi
 
   # Fix line endings on Windows mounted volumes for OpenSSL

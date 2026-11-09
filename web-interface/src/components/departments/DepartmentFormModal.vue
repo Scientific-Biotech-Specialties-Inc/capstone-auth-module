@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { X, Loader2, AlertCircle } from 'lucide-vue-next'
+import { X, Loader2, AlertCircle, Building2 } from 'lucide-vue-next'
 
 const props = defineProps<{
   modelValue: boolean
@@ -45,75 +45,102 @@ const handleSubmit = () => {
 </script>
 
 <template>
-  <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeModal"></div>
-    
-    <div class="relative bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-      <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-        <h2 class="text-xl font-bold text-slate-900">
-          {{ mode === 'create' ? 'Create New Department' : 'Edit Department' }}
-        </h2>
-        <button @click="closeModal" class="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all">
-          <X :size="20" />
-        </button>
-      </div>
-
-      <form @submit.prevent="handleSubmit" class="p-6 space-y-5">
-        <div v-if="error" class="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-medium animate-shake">
-          <AlertCircle :size="18" />
-          {{ error }}
-        </div>
-
-        <div class="space-y-1.5">
-          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Department Name</label>
-          <input 
-            v-model="form.name"
-            type="text" 
-            required
-            placeholder="e.g. Engineering"
-            class="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-2xl text-sm font-medium focus:bg-white focus:border-slate-900 transition-all outline-none"
-          />
-        </div>
-
-        <div class="space-y-1.5">
-          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Description</label>
-          <textarea 
-            v-model="form.description"
-            rows="3"
-            placeholder="What does this department do?"
-            class="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-2xl text-sm font-medium focus:bg-white focus:border-slate-900 transition-all outline-none resize-none"
-          ></textarea>
-        </div>
-
-        <div class="pt-4 flex gap-3">
-          <button 
-            type="button" 
+  <Teleport to="body">
+    <div
+      v-if="modelValue"
+      class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200"
+      @click.self="closeModal"
+    >
+      <!-- Modal Card — DESIGN.md §VI.6 Form Modal spec -->
+      <div
+        class="relative bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200"
+        role="dialog"
+        aria-modal="true"
+      >
+        <!-- Header: left-aligned icon badge + title + close -->
+        <div class="p-6 border-b border-slate-100 flex items-start justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <!-- Soft blue circular icon badge (DESIGN.md §VI.6) -->
+            <div class="w-10 h-10 rounded-xl bg-blue-50 text-[#2E85D8] flex items-center justify-center flex-shrink-0">
+              <Building2 :size="20" />
+            </div>
+            <div>
+              <h2 class="text-lg font-bold text-[#1E293B] font-sans">
+                {{ mode === 'create' ? 'Create New Department' : 'Edit Department' }}
+              </h2>
+              <p class="text-xs text-[#8D8B8F] mt-0.5 font-sans">
+                {{ mode === 'create' ? 'Add a new department to your organization' : 'Update department name and description' }}
+              </p>
+            </div>
+          </div>
+          <button
             @click="closeModal"
-            class="flex-1 px-6 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+            class="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-all cursor-pointer flex-shrink-0"
           >
-            Cancel
-          </button>
-          <button 
-            type="submit"
-            :disabled="submitting"
-            class="flex-1 px-6 py-3 bg-gradient-to-r from-[#252578] to-[#3b82f6] text-white text-sm font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            <Loader2 v-if="submitting" class="animate-spin" :size="18" />
-            {{ submitting ? 'Saving...' : (mode === 'create' ? 'Create Department' : 'Save Changes') }}
+            <X :size="18" />
           </button>
         </div>
-      </form>
-    </div>
-  </div>
-</template>
 
-<style scoped>
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-4px); }
-  75% { transform: translateX(4px); }
-}
-.animate-shake {
-  animation: shake 0.2s ease-in-out 0s 2;
-}
-</style>
+        <!-- Full-width divider already from border-b above -->
+
+        <!-- Form Body -->
+        <form @submit.prevent="handleSubmit" class="p-6 space-y-5">
+          <!-- Inline error alert -->
+          <div
+            v-if="error"
+            class="p-3.5 rounded-xl bg-red-50 border border-red-100 flex items-center gap-2.5 text-red-700 text-xs font-semibold"
+          >
+            <AlertCircle :size="16" class="flex-shrink-0" />
+            <span>{{ error }}</span>
+          </div>
+
+          <!-- Department Name -->
+          <div class="space-y-2">
+            <label class="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider font-sans">
+              Department Name
+            </label>
+            <input
+              v-model="form.name"
+              type="text"
+              required
+              placeholder="e.g. Engineering"
+              class="flex h-11 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-[#1E293B] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2E85D8]/20 focus:border-[#2E85D8] transition-all"
+            />
+          </div>
+
+          <!-- Description -->
+          <div class="space-y-2">
+            <label class="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider font-sans">
+              Description
+            </label>
+            <textarea
+              v-model="form.description"
+              rows="3"
+              placeholder="What does this department do?"
+              class="flex w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-[#1E293B] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2E85D8]/20 focus:border-[#2E85D8] transition-all resize-none"
+            ></textarea>
+          </div>
+
+          <!-- Right-aligned action footer (DESIGN.md §VI.6) -->
+          <div class="pt-2 flex items-center justify-end gap-3">
+            <button
+              type="button"
+              @click="closeModal"
+              class="px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-[#1E293B] text-sm font-semibold hover:bg-slate-50 transition-all cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              :disabled="submitting || !form.name.trim()"
+              class="px-5 py-2.5 rounded-xl bg-[#252578] hover:bg-[#1e1e66] text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-[0.98]"
+            >
+              <Loader2 v-if="submitting" class="animate-spin h-4 w-4" />
+              <span>{{ submitting ? 'Saving...' : (mode === 'create' ? 'Create Department' : 'Save Changes') }}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </Teleport>
+</template>

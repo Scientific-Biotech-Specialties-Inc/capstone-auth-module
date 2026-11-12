@@ -13,10 +13,11 @@ class BranchSeeder extends Seeder
      */
     public function run(): void
     {
+        // The full SBSI branch list is seeded by migration 2026_11_12_000001_seed_sbsi_branches.
         $branches = [
             [
-                'name' => 'Main Office',
-                'address' => 'Makati City, Metro Manila',
+                'name' => 'SBSI Makati Branch',
+                'address' => '6023 Sacred Heart cor. Kamagong Sts., San Antonio, 1203 Makati City, Metro Manila',
             ],
         ];
 
@@ -24,7 +25,7 @@ class BranchSeeder extends Seeder
             Branch::firstOrCreate(['name' => $branchData['name']], $branchData);
         }
 
-        $mainBranch = Branch::where('name', 'Main Office')->first();
+        $mainBranch = Branch::where('name', 'SBSI Makati Branch')->first();
         if ($mainBranch) {
             UserProfile::whereNull('branch_id')->update(['branch_id' => $mainBranch->id]);
         }

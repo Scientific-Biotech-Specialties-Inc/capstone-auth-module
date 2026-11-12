@@ -15,7 +15,8 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         $usersToSeed = [
-            ['Super', null, 'Admin', 'superadmin@example.com', 'IT', 'Super Admin'],
+            // Branch-scoped Ticketing administrator (role created by migration 2026_11_12_000002).
+            ['Branch', null, 'Admin', 'branchadmin@example.com', 'IT', 'Branch Admin'],
             ['System', null, 'Administrator', 'admin@example.com', 'IT', 'IT Admin'],
             ['Department', null, 'Manager', 'manager@example.com', 'Operations', 'Manager'],
             ['Sales', null, 'Representative', 'sales@example.com', 'Operations', 'Sales'],

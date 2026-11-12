@@ -69,7 +69,7 @@ class AdminAccountCreationTest extends TestCase
 
     public function test_super_admin_can_create_account_for_any_department()
     {
-        [$user, $sessionId] = $this->getUserWithSession('superadmin@example.com'); // Super Admin (IT)
+        [$user, $sessionId] = $this->getUserWithSession('superadmin@sbsi.com'); // Super Admin (superadmin@example.com no longer exists: it is now branchadmin@example.com)
         $itDept = Department::where('name', 'IT')->first();
         $role = Role::where('name', 'Manager')->first();
 

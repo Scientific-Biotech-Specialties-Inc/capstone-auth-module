@@ -107,7 +107,7 @@ jobs:
             'exit(version_compare(PHP_VERSION, getenv("MIN_PHP_VERSION"), "<") ? 1 : 0);'
 
       - name: Gate - Trivy scan auth-api
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ${{ env.REGISTRY_ORG }}/auth-api:${{ env.IMAGE_TAG }}
           severity: CRITICAL

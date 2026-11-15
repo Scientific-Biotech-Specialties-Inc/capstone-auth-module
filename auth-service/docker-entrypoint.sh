@@ -78,6 +78,11 @@ else
   echo "Skipping initialization tasks (SKIP_MIGRATIONS is set to true)..."
 fi
 
+# Passport requires key files to have restrictive permissions (600/660)
+if [ -f storage/oauth-private.key ] && [ -f storage/oauth-public.key ]; then
+  chmod 600 storage/oauth-private.key storage/oauth-public.key 2>/dev/null || true
+fi
+
 # Start the application
 echo "Starting application..."
 exec "$@"

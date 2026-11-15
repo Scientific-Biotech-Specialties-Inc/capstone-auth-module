@@ -43,9 +43,6 @@ RUN composer install --no-interaction --optimize-autoloader
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Passport requires key files to have restrictive permissions (600/660)
-RUN chmod 600 storage/oauth-private.key storage/oauth-public.key
-
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
